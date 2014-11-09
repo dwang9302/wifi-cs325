@@ -2,13 +2,23 @@ package wifi;
 import java.util.concurrent.ArrayBlockingQueue;
 import rf.RF;
 
+/**
+ * A class for listening to incoming data, check and classify received data
+ * 
+ * @author Dongni W.
+ * @version 11.8.2014
+ */
 public class Receiver implements Runnable
 {
 	private ArrayBlockingQueue<byte[]> data;
 	//private ArrayBlockingQueue<byte[]> acks;
-	//private short myAddress; 
 	private RF theRF;
 	
+	/**
+	 * The constructor of class Recevier
+	 * @param theRF
+	 * @param data
+	 */
 	public Receiver(RF theRF, ArrayBlockingQueue<byte[]> data)
 	{
 		this.theRF = theRF;
@@ -16,12 +26,14 @@ public class Receiver implements Runnable
 	}
 	
 	@Override
-	public void run() {
-		while(true)
+	public void run() 
+	{
+		while(true) //keeps listening..
 		{
 			byte[] received = theRF.receive();
 			
-			//use the packet class to help extract data...
+			//use the packet class to help extract data
+			
 			
 			//check to see if the message is for us (Dest Addr)
 			

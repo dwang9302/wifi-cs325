@@ -1,25 +1,25 @@
 package wifi;
 import java.io.PrintWriter;
 import java.util.concurrent.ArrayBlockingQueue;
-
 import rf.RF;
 
 /**
  * Use this layer as a starting point for your project code.  See {@link Dot11Interface} for more
  * details on these routines.
  * @author richards
+ * @author Dongni W.
  */
 public class LinkLayer implements Dot11Interface {
    private RF theRF;           // You'll need one of these eventually
    private short ourMAC;       // Our MAC address
    private PrintWriter output; // The output stream we'll write to
    
-   private Receiver receiver; //+
-   private Sender sender; //+
+   private Packet helper; //+helper for writing/reading packet (if mAddr could be remembered?)
+   private Receiver receiver; //+the class for listening to incoming data
+   private Sender sender; //+the class for for sending outgoing data 
    private ArrayBlockingQueue<byte[]> toSend; //+queue up outgoing data
    private ArrayBlockingQueue<byte[]> received; //+queue up received but not yet forwarded data
-   //private ArrayBlockingQueue<byte[]> acks; //+queue up outgoing data
-   private Thread rec;
+   //private ArrayBlockingQueue<byte[]> acks; //+queue up received acks
    
    /**
     * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -33,9 +33,9 @@ public class LinkLayer implements Dot11Interface {
       theRF = new RF(null, null);
       output.println("LinkLayer: Constructor ran.");
       
-      this.sender = new Sender(theRF, toSend);
-      this.receiver = new Receiver(theRF, received);
-      
+      this.sender = new Sender(theRF, toSend);//initialize the sender
+      this.receiver = new Receiver(theRF, received); //initialize the receiver 
+      helper = new Packet();
    }
 
    /**
@@ -44,13 +44,12 @@ public class LinkLayer implements Dot11Interface {
     */
    public int send(short dest, byte[] data, int len) {
       output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-      //build the frame with data, sequence #, retry bit
-      //+packet = Packet.createPacket(typeData, sequence# = 0, retry bit = 0, address*2, data, CRC(all 1s))
-      //+toSend.add(packet);
+      //build the frame with data, sequence # = 0, retry bit = 0
+      short seq = 0; //handled in sender;
+      byte[] outPack = helper.createMessage("Data", false, ourMAC, dest, data, len, seq); //create packet
+      toSend.add(outPack);//add to the outgoing queue
       
-      //theRF.transmit(data);
-      //+theRF.transmit(packet);
-      return len;
+      return len; //may return -1 when? 
    }
 
    /**
@@ -59,15 +58,35 @@ public class LinkLayer implements Dot11Interface {
     */
    public int recv(Transmission t) {
       output.println("LinkLayer: Pretending to block on recv()");
-      //+while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.
-      this.rec = new Thread(receiver);
-      rec.start();//+
-      boolean running = true;
-      while(running)
+      //+while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.  
+      new Thread(receiver).start();
+      byte[] dataR; //the packet received
+      while(true) 
       {
-			//rec.sleep(RF.aSIFSTime);	
-      }
-      //+return 0;
+    	  while(received.isEmpty()) //<---is it a good way to wait?
+    	  {
+    		  try {
+    			  Thread.sleep(RF.aSlotTime);
+    		  } catch (InterruptedException e) {
+    			  e.printStackTrace();
+    		  }	
+    	  }
+    	  
+      byte[] inPack = null;
+	  try {
+		inPack = received.take(); //try to get the received data 
+	  } catch (InterruptedException e) {
+		e.printStackTrace();
+	  }
+	  
+	  ///////////////////////////////////not sure how transmission works...? when to return?
+	  //write to transmission 
+	  dataR = helper.checkData(inPack);
+	  t.setBuf(dataR);
+      t.setDestAddr(ourMAC);
+      t.setSourceAddr(helper.checkSource(inPack));  
+      //return dataR.length;
+      }   
    }
 
    /**
