@@ -10,19 +10,25 @@ import rf.RF;
  */
 public class Receiver implements Runnable
 {
-	private ArrayBlockingQueue<byte[]> data;
-	//private ArrayBlockingQueue<byte[]> acks;
+	private ArrayBlockingQueue<byte[]> data; //+queue up received data
+	private ArrayBlockingQueue<byte[]> acks; //+queue up received ACKs
 	private RF theRF;
+	private Packet helper;
+	private short ourMAC; //for address selectivity
 	
 	/**
 	 * The constructor of class Recevier
 	 * @param theRF
-	 * @param data
+	 * @param data - queue for received data
+	 * @param acks - queue for received ACKs
 	 */
-	public Receiver(RF theRF, ArrayBlockingQueue<byte[]> data)
+	public Receiver(short ourMAC, RF theRF, ArrayBlockingQueue<byte[]> data, ArrayBlockingQueue<byte[]> acks)
 	{
+		this.ourMAC = ourMAC;
 		this.theRF = theRF;
 		this.data = data;
+		this.acks = acks;
+		helper = new Packet();
 	}
 	
 	@Override
@@ -32,25 +38,27 @@ public class Receiver implements Runnable
 		{
 			byte[] received = theRF.receive();
 			
-			//use the packet class to help extract data
+			//if the message is not for us, ignore
+			if(helper.checkDest(received) != ourMAC)
+			{
+				received = theRF.receive();
+			}
+				
+			//check to see the frame type 
+			if(helper.checkMessageType(received).equals("ACK"))//ACK
+			{
+				acks.add(received); //store it into the acks (sender may want to check it )
+			}
+			else //DATA 
+			{
+				//int sequenceExpected = 0;
+				//make and send ack
+				//check sequence number,
+				//if good: store it to data
+				data.add(received);
+			}
 			
-			
-			//check to see if the message is for us (Dest Addr)
-			
-			//if not, ignore
-			
-			//is yes, check to see the frame type
-			
-			//ACK : store it into the acks (sender may want to check it )
-			
-			
-			//DATA :
-			int sequenceExpected = 0;
-			//make and send ack
-			//check sequence number,
-			//if good: store it to data
-			
-			sequenceExpected++;
+			//sequenceExpected++;
 	
 		}
 		

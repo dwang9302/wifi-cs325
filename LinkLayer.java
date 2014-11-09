@@ -19,7 +19,8 @@ public class LinkLayer implements Dot11Interface {
    private Sender sender; //+the class for for sending outgoing data 
    private ArrayBlockingQueue<byte[]> toSend; //+queue up outgoing data
    private ArrayBlockingQueue<byte[]> received; //+queue up received but not yet forwarded data
-   //private ArrayBlockingQueue<byte[]> acks; //+queue up received acks
+   private ArrayBlockingQueue<byte[]> acks; //+queue up received acks
+   private short seq; //sequence #
    
    /**
     * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -34,8 +35,9 @@ public class LinkLayer implements Dot11Interface {
       output.println("LinkLayer: Constructor ran.");
       
       this.sender = new Sender(theRF, toSend);//initialize the sender
-      this.receiver = new Receiver(theRF, received); //initialize the receiver 
+      this.receiver = new Receiver(ourMAC, theRF, received, acks); //initialize the receiver 
       helper = new Packet();
+      seq = 0;
    }
 
    /**
@@ -44,11 +46,14 @@ public class LinkLayer implements Dot11Interface {
     */
    public int send(short dest, byte[] data, int len) {
       output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+      //TODO: check if dest/data/len is valid.
       //build the frame with data, sequence # = 0, retry bit = 0
-      short seq = 0; //handled in sender;
+      //TODO: if > aMPDUMAximumLength, build multiple packets...
+      
       byte[] outPack = helper.createMessage("Data", false, ourMAC, dest, data, len, seq); //create packet
       toSend.add(outPack);//add to the outgoing queue
-      
+      new Thread(sender).start(); //call to send every time OR start the thread in constructor and just add to outgoing queue 
+      seq++;
       return len; //may return -1 when? 
    }
 
@@ -61,16 +66,16 @@ public class LinkLayer implements Dot11Interface {
       //+while(true); // <--- This is a REALLY bad way to wait.  Sleep a little each time through.  
       new Thread(receiver).start();
       byte[] dataR; //the packet received
-      while(true) 
+   
+      while(received.isEmpty()) //<---is it a good way to wait?
       {
-    	  while(received.isEmpty()) //<---is it a good way to wait?
-    	  {
-    		  try {
-    			  Thread.sleep(RF.aSlotTime);
-    		  } catch (InterruptedException e) {
-    			  e.printStackTrace();
-    		  }	
-    	  }
+   			  try {
+				Thread.sleep(RF.aSlotTime);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+   		 
+   	  }
     	  
       byte[] inPack = null;
 	  try {
@@ -79,14 +84,14 @@ public class LinkLayer implements Dot11Interface {
 		e.printStackTrace();
 	  }
 	  
-	  ///////////////////////////////////not sure how transmission works...? when to return?
+	  ///////////////////////////////////not sure how transmission works...
 	  //write to transmission 
 	  dataR = helper.checkData(inPack);
 	  t.setBuf(dataR);
       t.setDestAddr(ourMAC);
       t.setSourceAddr(helper.checkSource(inPack));  
-      //return dataR.length;
-      }   
+      return dataR.length;
+        
    }
 
    /**
@@ -103,5 +108,6 @@ public class LinkLayer implements Dot11Interface {
    public int command(int cmd, int val) {
       output.println("LinkLayer: Sending command "+cmd+" with value "+val);
       return 0;
+      //TODO: add debug command
    }
 }
