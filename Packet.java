@@ -97,7 +97,7 @@ public class Packet
         //as seen in the spec int send(short dest, byte[] data, int len)
         if (dataLength != 0)
         {
-            for (int i = 0; i < 2038; i++)
+            for (int i = 0; i <data.length ;i++)//2038; i++)
             {
                 packet[6+i] = data[i];
             }

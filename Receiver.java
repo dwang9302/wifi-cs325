@@ -1,4 +1,6 @@
 package wifi;
+
+import java.io.PrintWriter;
 import java.util.concurrent.ArrayBlockingQueue;
 import rf.RF;
 
@@ -6,62 +8,83 @@ import rf.RF;
  * A class for listening to incoming data, check and classify received data
  * 
  * @author Dongni W.
- * @version 11.8.2014
+ * @version 11.9.2014
  */
-public class Receiver implements Runnable
-{
-	private ArrayBlockingQueue<byte[]> data; //+queue up received data
-	private ArrayBlockingQueue<byte[]> acks; //+queue up received ACKs
+public class Receiver implements Runnable {
 	private RF theRF;
 	private Packet helper;
-	private short ourMAC; //for address selectivity
-	
+	private PrintWriter output; // The output stream we'll write to
+
+	private ArrayBlockingQueue<byte[]> data; // +queue up received data
+	private ArrayBlockingQueue<byte[]> acks; // +queue up received ACKs
+
+	private short ourMAC; // for address selectivity
+	private int debugL;
+
 	/**
 	 * The constructor of class Recevier
+	 * 
 	 * @param theRF
-	 * @param data - queue for received data
-	 * @param acks - queue for received ACKs
+	 * @param data
+	 *            - queue for received data
+	 * @param acks
+	 *            - queue for received ACKs
 	 */
-	public Receiver(short ourMAC, RF theRF, ArrayBlockingQueue<byte[]> data, ArrayBlockingQueue<byte[]> acks)
-	{
-		this.ourMAC = ourMAC;
+	public Receiver(RF theRF, PrintWriter output,
+			ArrayBlockingQueue<byte[]> data, ArrayBlockingQueue<byte[]> acks,
+			int debugL, short ourMAC) {
 		this.theRF = theRF;
+		this.output = output;
+		helper = new Packet();
+
 		this.data = data;
 		this.acks = acks;
-		helper = new Packet();
+
+		this.ourMAC = ourMAC;
+		this.debugL = debugL;
 	}
-	
+
+	/**
+	 * Change the debug level if received such command from the user
+	 * 
+	 * @param newLevel
+	 */
+	public void changeDebug(int newLevel) {
+		debugL = newLevel;
+	}
+
 	@Override
-	public void run() 
-	{
-		while(true) //keeps listening..
+	public void run() {
+		while (true) // keeps listening..
 		{
 			byte[] received = theRF.receive();
-			
-			//if the message is not for us, ignore
-			if(helper.checkDest(received) != ourMAC)
-			{
+
+			// if the message is not for us, ignore
+			if (helper.checkDest(received) != ourMAC) {
 				received = theRF.receive();
 			}
-				
-			//check to see the frame type 
-			if(helper.checkMessageType(received).equals("ACK"))//ACK
+
+			// check to see the frame type
+			if (helper.checkMessageType(received).equals("ACK"))// ACK
 			{
-				acks.add(received); //store it into the acks (sender may want to check it )
-			}
-			else //DATA 
+				acks.add(received); // store it into the acks (sender may want
+									// to check it )
+			} else // DATA
 			{
-				//int sequenceExpected = 0;
-				//make and send ack
-				//check sequence number,
-				//if good: store it to data
+				// int sequenceExpected = 0;
+				// make and send ack
+				// check sequence number,
+				// if good: store it to data
 				data.add(received);
+				if (debugL == 1) {
+					output.println("Data received");
+				}
 			}
-			
-			//sequenceExpected++;
-	
+
+			// sequenceExpected++;
+
 		}
-		
+
 	}
 
 }
