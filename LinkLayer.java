@@ -111,10 +111,11 @@ public class LinkLayer implements Dot11Interface {
 		output.println("LinkLayer: Pretending to block on recv()");
 		// +while(true); // <--- This is a REALLY bad way to wait. Sleep a
 		// little each time through.
+		//DJ:  The while(true) isn't really a wait, it is just an endless loop.
 
 		byte[] dataR; // the packet received
 
-		while (received.isEmpty()) // <---is it a good way to wait?
+		while (received.isEmpty()) // <---is it a good way to wait?  //DJ:  Should work.  Will keep waiting until false.
 		{
 			try {
 				Thread.sleep(RF.aSlotTime);

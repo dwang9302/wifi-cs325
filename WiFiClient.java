@@ -359,7 +359,7 @@ public class WiFiClient implements ActionListener, Runnable {
             } catch (InterruptedException e) {
                // Do nothing if awakened early
             }   
-            byte[] bytes = theLinkLayer.watchForIncomingData();
+            byte[] bytes = theLinkLayer.watchForIncomingData(); //calls in the JavaGUIAdapter the thing that calls the recv in LinkLayer
             if (bytes != null && bytes.length >= 2) {
                int tmp = ((int)bytes[0]) & 0xFF;
                tmp = (tmp << 8) | (((int)bytes[1]) & 0xFF);

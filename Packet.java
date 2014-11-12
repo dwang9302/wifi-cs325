@@ -47,24 +47,41 @@ public class Packet
         {
             firstByte &= ~(1 << 7); //left shifts to set bit
             firstByte &= ~(1 << 6);
-            firstByte &= ~(1 << 5);
+            firstByte &= ~(1 << 5); //000
         }
         
         else if (messageType == "ACK")
         {
            firstByte &= ~(1 << 7);
            firstByte &= ~(1 << 6);
-           firstByte |= (1 << 5);
+           firstByte |= (1 << 5); //001
         }
-        
+        else if (messageType == "Beacon")
+        {
+            firstByte &= ~(1 << 7);
+            firstByte |= (1 << 6);
+            firstByte &= ~(1 << 5); //010
+        }
+        else if (messageType == "CTS")
+        {
+            firstByte |= (1 << 7);
+            firstByte &= ~(1 << 6);
+            firstByte &= ~(1 << 5); //100
+        }
+        else if (messageType == "RTS")
+        {
+            firstByte |= (1 << 7);
+            firstByte &= ~(1 << 6);
+            firstByte |= (1 << 5); //101
+        }
         
         if (restransmit == true)
         {
-            firstByte |= (1 << 4);
+            firstByte |= (1 << 4); //flips bit to be one
         }
         else
         {
-            firstByte &= ~(1 << 4);
+            firstByte &= ~(1 << 4); //else bit is zero
         }
         //figure out the sequence Number
         //start from the end of sequenceNumber and keep going
@@ -104,7 +121,7 @@ public class Packet
         }
         //figure out how to make extra packets for those with higher than lengh 2038
         
-        //we're not implementing a real checksum yet, so we'll just use 1s for CRC
+        //we're not implementing a real checksum yet, so we'll just use 1s for CRC for now
         packet[packetLength-4] = 1;
         packet[packetLength-3] = 1;
         packet[packetLength-2] = 1;
@@ -139,16 +156,16 @@ public class Packet
             {
                 if(thirdBit == 0)
                 {
-                    return "Data";
+                    return "Data"; //000
                 }
                 else
                 {
-                    return "ACK";
+                    return "ACK"; //001
                 }
             }
             else
             {
-                return "Beacon";
+                return "Beacon"; //010
             }
         }
         else
@@ -157,11 +174,11 @@ public class Packet
             {
                 if (thirdBit == 0)
                 {
-                    return "CTS";
+                    return "CTS"; //100
                 }
                 else
                 {
-                    return "RTS";
+                    return "RTS"; //101
                 }
             }
             else 
