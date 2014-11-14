@@ -6,6 +6,7 @@ import rf.RF;
 
 /**
  * A class for sending data, waiting for ACKs and handling retransmissions.
+ * Important:  check how many bytes are actually being sent.
  * 
  * @author Dongni.W
  * @version 11.9.2014
@@ -17,6 +18,7 @@ public class Sender implements Runnable {
 	private ArrayBlockingQueue<byte[]> toSend; // +queue up outgoing data
 
 	private int debugL;
+	private int bytesSent; //checks the bytes sent
 
 	/**
 	 * The constructor of the class Sender
@@ -64,7 +66,8 @@ public class Sender implements Runnable {
 			}
 
 			// try transmit
-			theRF.transmit(beingSent);
+			bytesSent = theRF.transmit(beingSent);
+			System.out.println("The number of bytes sent: " + bytesSent); //testing the size
 
 			// implement State switch
 			// check for ack...

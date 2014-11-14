@@ -207,7 +207,7 @@ public class Packet
     }
     
     /**
-     * Helps grab the data to put into the Transmission class
+     * Helps grab the data to put into the Transmission class.  This will only work for packets of size 2048 under the correct size
      */
     public byte[] checkData (byte[] pack)
     {
