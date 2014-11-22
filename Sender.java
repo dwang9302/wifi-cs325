@@ -59,11 +59,21 @@ public class Sender implements Runnable {
 			// listen first, wait if the channel is busy
 			while (theRF.inUse()) {
 				try {
-					Thread.sleep(theRF.aSlotTime);
+					Thread.sleep(theRF.aSlotTime); //we shouldn't need this anymore.  Instead, we implement the MAC rules
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
+
+			//while sending, implement the MAC Rules.  We have to decrement the time as theRF.inUse() isn't true.
+			//we should have it so that we have a giant counter that decrements when !theRF.inUse().
+			//figure out what our counter should be (DIFS).  Should be based off of SIFS, but multiplied by something
+
+			//Medium is idle.  Wait IFS
+				//Is it still idle?  Transmit cause your IFS is done.  IFS for us should be DIFS
+
+			//Medium isn't idle.  Wait.  This is a loop
+				//while idle, decrement counter.  Else just wait
 
 			// try transmit
 			bytesSent = theRF.transmit(beingSent);
@@ -78,7 +88,9 @@ public class Sender implements Runnable {
 
 			// if there's no ack or only bad ones, something went wrong
 			// window size ++
-			// re-send
+			// re-send from the beginning
+
+			//If something is on bcast, we shouldn't care if we get ACKs.  Worry about this later
 		}
 	}
 }

@@ -67,12 +67,12 @@ public class Receiver implements Runnable {
 			// check to see the frame type
 			if (helper.checkMessageType(received).equals("ACK"))// ACK
 			{
-				acks.add(received); // store it into the acks (sender may want
+				acks.add(received); // store it into the acks (sender may want  <--make sure that address selectivity is working
 									// to check it )
 			} else // DATA
 			{
 				// int sequenceExpected = 0;
-				// make and send ack
+				// make and send ack  <--implement the ACK system.  How do we make it known that they know an ACK for this was sent?  What if they time out and send again?  Make sure that we don't add the data again.
 				// check sequence number,
 				// if good: store it to data
 				data.add(received);

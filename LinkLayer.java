@@ -74,7 +74,7 @@ public class LinkLayer implements Dot11Interface {
 
 		// if length < aMPDUMAximumLength - 10, send
 		if (len <= dataLimit) {
-			// build the frame with data, sequence # = 0, retry bit = 0
+			// build the frame with data, sequence # = 0, retry bit = 0  //Something about the sequence number:  what if we need to resend the data?  We should make sure that we have a timer to work upon for resending OR if we don't get an ACK
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,
 					data, len, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
