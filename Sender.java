@@ -12,6 +12,10 @@ import rf.RF;
  * @version 11.9.2014
  */
 public class Sender implements Runnable {
+	public enum State {
+		START_STATE, AWAIT_CHANNEL, AWAIT_BACKOFF, AWAIT_DIFS, AWAIT_ACK
+	};
+	
 	private RF theRF;
 	private PrintWriter output; // The output stream we'll write to
 	// private ArrayBlockingQueue<byte[]> acks;
@@ -19,6 +23,8 @@ public class Sender implements Runnable {
 
 	private int debugL;
 	private int bytesSent; //checks the bytes sent
+	private State currentState;
+	
 
 	/**
 	 * The constructor of the class Sender
@@ -77,13 +83,15 @@ public class Sender implements Runnable {
 
 			// try transmit
 			bytesSent = theRF.transmit(beingSent);
-			System.out.println("The number of bytes sent: " + bytesSent); //testing the size
 
 			// implement State switch
 			// check for ack...
 			// if there's a good ack
 			if (debugL == 1) {
-				output.println("Testing: Data sent");
+				if(bytesSent > 0)
+					output.println("Testing: Data sent"+ "The number of bytes sent: " + bytesSent);
+				else 
+					output.println("Testing: Data not sent");
 			}
 
 			// if there's no ack or only bad ones, something went wrong
@@ -93,4 +101,22 @@ public class Sender implements Runnable {
 			//If something is on bcast, we shouldn't care if we get ACKs.  Worry about this later
 		}
 	}
+//	
+	//TODO: HANDLE EVENT :COUTNER.. 
+//	switch (myState)
+//    {
+//        case START_STATE:
+			//IF..ELSE IF.. ELSE...
+//            break;
+//            
+//        case  XXX
+//            break;
+//            
+//        case ...
+	//..................
+//            
+//        default:
+//            System.out.println("Unexpected state!");
+//    }
+	
 }

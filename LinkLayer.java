@@ -49,7 +49,7 @@ public class LinkLayer implements Dot11Interface {
 
 		// thread
 		toSend = new ArrayBlockingQueue<byte[]>(10);
-		received = new ArrayBlockingQueue<byte[]>(20);
+		received = new ArrayBlockingQueue<byte[]>(10);
 		acks = new ArrayBlockingQueue<byte[]>(5);
 
 		this.sender = new Sender(theRF, this.output, toSend, debugLevel);// initialize
@@ -74,7 +74,11 @@ public class LinkLayer implements Dot11Interface {
 
 		// if length < aMPDUMAximumLength - 10, send
 		if (len <= dataLimit) {
-			// build the frame with data, sequence # = 0, retry bit = 0  //Something about the sequence number:  what if we need to resend the data?  We should make sure that we have a timer to work upon for resending OR if we don't get an ACK
+			// build the frame with data, sequence # = 0, retry bit = 0  
+			//Something about the sequence number:  what if we need to resend the data?  
+			//Dongni: Resending does not require changing sequence number. We need to change the retry bit. Could this be handled in the packet class? Take a packet and flip one bit?
+			//We should make sure that we have a timer to work upon for resending OR if we don't get an ACK
+			//Dongni: It would be handled in the thread. 
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,
 					data, len, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
@@ -109,13 +113,10 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int recv(Transmission t) {
 		output.println("LinkLayer: Pretending to block on recv()");
-		// +while(true); // <--- This is a REALLY bad way to wait. Sleep a
-		// little each time through.
-		//DJ:  The while(true) isn't really a wait, it is just an endless loop.
 
 		byte[] dataR; // the packet received
 
-		while (received.isEmpty()) // <---is it a good way to wait?  //DJ:  Should work.  Will keep waiting until false.
+		while (received.isEmpty()) // 
 		{
 			try {
 				Thread.sleep(RF.aSlotTime);
