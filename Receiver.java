@@ -68,6 +68,7 @@ public class Receiver implements Runnable {
 			while( dest != ourMAC && dest != (short)(-1)) //destination is not our mac & it's not a broadcast.
 			{
 				received = theRF.receive(); //block until another good packet is received
+				dest= helper.checkDest(received); //we need this otherwise we're stuck in an endless loop
 			}
 
 			// check to see the frame type
@@ -91,9 +92,16 @@ public class Receiver implements Runnable {
 				if (debugL == 1) {
 					output.println("Data received");
 				}
+
+				//wait for SIFS and then send the ACK.
+
+				//thread.sleep(theRF.aSIFSTime) //wait for SIFSTime before sending
+				//sendACK = helper.createACK(ourMAC, helper.checkSource(received), expectedSeq) //need to figure out how we do expectedSeq in order to do this.
+				//theRF.transmit(sendACK);
 				
 				//Expected next packet with the right sequence number (may from different sources.)
-				//expectedSeq++;
+				//TODO: create a storage for each MAC address we receive from (outside of bcast?  Not sure about that yet)
+				//expectedSeq++; <---we should create a Hashtable of some sort to store expected sequences for each MAC Address we recieve from.
 				
 			}
 			//later beacon

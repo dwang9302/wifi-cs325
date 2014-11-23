@@ -68,6 +68,9 @@ public class LinkLayer implements Dot11Interface {
 	 * of bytes to send. See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
+
+		//TODO:  Add some sort of Hashtable for the different addresses you send to and the sequence number for that.
+
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 
 		int dataLimit = RF.aMPDUMaximumLength - 10;
@@ -79,6 +82,8 @@ public class LinkLayer implements Dot11Interface {
 			//Dongni: Resending does not require changing sequence number. We need to change the retry bit. Could this be handled in the packet class? Take a packet and flip one bit?
 			//We should make sure that we have a timer to work upon for resending OR if we don't get an ACK
 			//Dongni: It would be handled in the thread. 
+			//DJ: you're right.  
+
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,
 					data, len, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
@@ -99,6 +104,7 @@ public class LinkLayer implements Dot11Interface {
 			}
 			byte[] packetL = new byte[lenEx];
 			System.arraycopy(data, srcPos, packetL, 0, lenEx);
+
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,
 					packetL, lenEx, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
