@@ -28,6 +28,7 @@ public class Sender implements Runnable {
 	private int wait;
 	private Random rand;
 	private int cWindow;
+	private int retry; //keeps track of retries.  If it's 3, then we give up
 	
 
 	/**
@@ -46,8 +47,9 @@ public class Sender implements Runnable {
 		// this.acks = acks;
 		this.debugL = debugL;
 		difs = theRF.aSIFSTime + (2* theRF.aSlotTime); //added the standardized DIFS to wait for at the beginning of sending
-		rand = new Random(); //use this for deciding the contension slot
+		rand = new Random(); //use this for deciding the contension slot.  Better to initialize now than later
 		cWindow = theRF.aCWmin; //sets up the contension window
+		retry = 0;
 	}
 
 	/**
@@ -70,9 +72,10 @@ public class Sender implements Runnable {
 				e.printStackTrace();
 			}
 
-			// listen first, wait if the channel is busy
-			while (!theRF.inUse() && wait != 0)
+			// listen first, wait if the channel is busy.  Start with DIFS.  Also checks if this was a retry.  If not, then we're fine
+			while (!theRF.inUse() && wait != 0 && !helper.checkRetry(beingSent))
 			{
+				retry = 0;// can do this in a better way.  Will work on that tomorrow
 				wait--; //this is the case where no one is using the channel during the entire time of DIFS
 				//exits when either the connection is in Use or if we're done waiting
 			}
@@ -115,7 +118,8 @@ public class Sender implements Runnable {
 
 			// if there's no ack or only bad ones (more than likely an older one was sent back), something went wrong
 			// window size ++
-			// re-send from the beginning.  (Maybe something like toSend.add(helper.createMessage("Data", True, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataLength(beingSent), helper.checkSequenceNo(beingSent))))
+			// re-send from theBackOff.  (Maybe something like toSend.add(helper.createMessage("Data", True, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataLength(beingSent), helper.checkSequenceNo(beingSent))))
+			//retry++
 
 			//If something is on bcast, we shouldn't care if we get ACKs.  Worry about this later
 		}

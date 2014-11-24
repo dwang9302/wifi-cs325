@@ -242,6 +242,12 @@ public class Packet
                                 ((pack[1] & 0xFFL) << 0));
     }
 
+    public boolean checkRetry (byte[] pack)
+    {
+        int first = (int)(pack[0] & 0xFFL);
+        return getNthBitFromRight(first, 4); //test to see if this works
+    }
+
     /**
      * Helper method for Grabbing bits.  Starts from the right most bit
      * From www.coderanch.com/t/464835/java/java/short-bit
