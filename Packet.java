@@ -218,7 +218,24 @@ public class Packet
         }
         return tempData;
     }
+
+    /**
+    * Helper for grabing the Data Size
+    */
+    public int checkDataSize (byte[] pack)
+    {
+        return pack.length - 10;
+    }
     
+    /**
+    * Helper for grabbing the sequence number
+    */
+
+    public short checkSequenceNo (byte[] pack)
+    {
+        return 0;
+    }
+
     /**
      * Helper method for Grabbing bits.  Starts from the right most bit
      * From www.coderanch.com/t/464835/java/java/short-bit

@@ -96,7 +96,7 @@ public class Sender implements Runnable {
 
 			// if there's no ack or only bad ones, something went wrong
 			// window size ++
-			// re-send from the beginning
+			// re-send from the beginning.  (Maybe something like toSend.add(helper.createMessage("Data", True, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataLength(beingSent), short sequenceNumber)))
 
 			//If something is on bcast, we shouldn't care if we get ACKs.  Worry about this later
 		}
