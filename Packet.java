@@ -233,7 +233,13 @@ public class Packet
 
     public short checkSequenceNo (byte[] pack)
     {
-        return 0;
+        byte first = pack[0];
+            first &= ~(1 << 7); //grabs the last 4 bytes only.  The rest are 0s
+            first &= ~(1 << 6);
+            first &= ~(1 << 5); 
+            first &= ~(1 << 4);
+        return (short)((first & 0xFFL) << 8) | //places the short in the correct order
+                                ((pack[1] & 0xFFL) << 0));
     }
 
     /**
