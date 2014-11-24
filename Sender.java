@@ -24,6 +24,10 @@ public class Sender implements Runnable {
 	private int debugL;
 	private int bytesSent; //checks the bytes sent
 	private State currentState;
+	private int difs;
+	private int wait;
+	private Random rand;
+	private int cWindow;
 	
 
 	/**
@@ -41,6 +45,9 @@ public class Sender implements Runnable {
 		this.toSend = toSend;
 		// this.acks = acks;
 		this.debugL = debugL;
+		difs = theRF.aSIFSTime + (2* theRF.aSlotTime); //added the standardized DIFS to wait for at the beginning of sending
+		rand = new Random(); //use this for deciding the contension slot
+		cWindow = theRF.aCWmin; //sets up the contension window
 	}
 
 	/**
@@ -56,30 +63,42 @@ public class Sender implements Runnable {
 	public void run() {
 		while (true) {
 			byte[] beingSent = null;
+			wait = difs; //adds in the wait immediately
 			try {
-				beingSent = toSend.take();
+				beingSent = toSend.take(); 
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 
 			// listen first, wait if the channel is busy
-			while (theRF.inUse()) {
-				try {
-					Thread.sleep(theRF.aSlotTime); //we shouldn't need this anymore.  Instead, we implement the MAC rules
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+			while (!theRF.inUse() && wait != 0)
+			{
+				wait--; //this is the case where no one is using the channel during the entire time of DIFS
+				//exits when either the connection is in Use or if we're done waiting
 			}
 
-			//while sending, implement the MAC Rules.  We have to decrement the time as theRF.inUse() isn't true.
-			//we should have it so that we have a giant counter that decrements when !theRF.inUse().
-			//figure out what our counter should be (DIFS).  Should be based off of SIFS, but multiplied by something
+			if(wait != 0) //we exited the loop early.  Guess we gotta wait now...with even more time
+			{
+				while(wait != 0) //theRF was in use once during DIFS.  Go into the part with a contension window
+				{
+					while (!theRF.inUse()) //TheRF isn't in use.  Decrement the counter
+					{
+						wait--
+					}
+				}
+				//we finished DIFS, now time for the 'exponential backoff'
+				wait = (rand.nextInt(cWindow) + 1) * theRF.aSlotTime;
+				//now we wait again
+				while(wait != 0)
+				{
+					while (!theRF.inUse()) 
+					{
+						wait--;
+					}
+				}
+				//now we're done waiting.  It's our turn now...hopefully
+			}
 
-			//Medium is idle.  Wait IFS
-				//Is it still idle?  Transmit cause your IFS is done.  IFS for us should be DIFS
-
-			//Medium isn't idle.  Wait.  This is a loop
-				//while idle, decrement counter.  Else just wait
 
 			// try transmit
 			bytesSent = theRF.transmit(beingSent);
@@ -94,9 +113,9 @@ public class Sender implements Runnable {
 					output.println("Testing: Data not sent");
 			}
 
-			// if there's no ack or only bad ones, something went wrong
+			// if there's no ack or only bad ones (more than likely an older one was sent back), something went wrong
 			// window size ++
-			// re-send from the beginning.  (Maybe something like toSend.add(helper.createMessage("Data", True, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataLength(beingSent), short sequenceNumber)))
+			// re-send from the beginning.  (Maybe something like toSend.add(helper.createMessage("Data", True, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataLength(beingSent), helper.checkSequenceNo(beingSent))))
 
 			//If something is on bcast, we shouldn't care if we get ACKs.  Worry about this later
 		}
