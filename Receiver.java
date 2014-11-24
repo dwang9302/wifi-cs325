@@ -23,6 +23,7 @@ public class Receiver implements Runnable {
 	private int lastSeq; 
 	//Dongni: This may need to be a table that records all last received sequence numbers from different sources
 	//since different senders may have same/different sequence numbers. Which data structure would be ideal?
+	private HashTable<short,int> recvFrom;
 
 	/**
 	 * The constructor of class Recevier
@@ -44,6 +45,7 @@ public class Receiver implements Runnable {
 		this.ourMAC = ourMAC;
 		this.debugL = debugL;
 		//lastSeq = 0; //expected sequence number starts at 0
+		recvFrom = new HashTable(20);
 		
 	}
 

@@ -29,6 +29,8 @@ public class Sender implements Runnable {
 	private Random rand;
 	private int cWindow;
 	private int retry; //keeps track of retries.  If it's 3, then we give up
+
+	private HashTable<short,int> sentTo; //create a Table to store which MAC Address's we sent to and the sequence Number for them
 	
 
 	/**
@@ -50,6 +52,7 @@ public class Sender implements Runnable {
 		rand = new Random(); //use this for deciding the contension slot.  Better to initialize now than later
 		cWindow = theRF.aCWmin; //sets up the contension window
 		retry = 0;
+		sentTo = new HashTable(20); //don't know if we need 20 slots.  Doesn't hurt though.
 	}
 
 	/**
@@ -82,11 +85,14 @@ public class Sender implements Runnable {
 
 			if(wait != 0) //we exited the loop early.  Guess we gotta wait now...with even more time
 			{
-				while(wait != 0) //theRF was in use once during DIFS.  Go into the part with a contension window
+				if(!helper.checkRetry(beingSent)) //it's not a retry.  Wait for DIFS.
 				{
-					while (!theRF.inUse()) //TheRF isn't in use.  Decrement the counter
+					while(wait != 0) //theRF was in use once during DIFS.  Go into the part with a contension window
 					{
-						wait--
+						while (!theRF.inUse()) //TheRF isn't in use.  Decrement the counter
+						{
+							wait--
+						}
 					}
 				}
 				//we finished DIFS, now time for the 'exponential backoff'
