@@ -15,6 +15,7 @@ public class Receiver implements Runnable {
 	private RF theRF;
 	private Packet helper;
 	private PrintWriter output; // The output stream we'll write to
+	private short seqRecv;
 
 	private ArrayBlockingQueue<byte[]> data; // +queue up received data
 	private ArrayBlockingQueue<byte[]> acks; // +queue up received ACKs
@@ -22,8 +23,6 @@ public class Receiver implements Runnable {
 	private short ourMAC; // for address selectivity
 	private int debugL;
 	private int lastSeq; 
-	//Dongni: This may need to be a table that records all last received sequence numbers from different sources
-	//since different senders may have same/different sequence numbers. Which data structure would be ideal?
 	private Hashtable<Integer,Integer> recvFrom;
 
 	/**
@@ -46,7 +45,7 @@ public class Receiver implements Runnable {
 		this.ourMAC = ourMAC;
 		this.debugL = debugL;
 		//lastSeq = 0; //expected sequence number starts at 0
-		recvFrom = new Hashtable<Integer,Integer>(20);
+		recvFrom = new Hashtable<Integer, Integer>(20);
 		
 	}
 
@@ -66,7 +65,7 @@ public class Receiver implements Runnable {
 			byte[] received = theRF.receive();//block until a packet is received
 
 			//Address selectivity
-			//if the message is not for us, ignore. Dongni: here. <--make sure that address selectivity is working
+			//if the message is not for us, ignore. 
 			short dest = helper.checkDest(received);
 			while( dest != ourMAC && dest != (short)(-1)) //destination is not our mac & it's not a broadcast.
 			{
@@ -84,19 +83,68 @@ public class Receiver implements Runnable {
 			}
 			else // DATA
 			{
-				// int sequenceExpected = 0;
-				// make and send ack  <--implement the ACK system.  
-				//How do we make it known that they know an ACK for this was sent?  What if they time out and send again?  Make sure that we don't add the data again.
-				//Dongni: we are going to add the data only if it has our expected sequence number (>last one received from the same source), which would be updated after the data is added.
-				//:If they send again, they will be using the same sequence number with retry bit = 1 --> we should send back an ack (?tell them to stop) without adding the data.
-				//: Retry bit = 0 || retry bit = 1 and expected sequence #  --> add
-				//: Retry bit = 1 but not expected sequence # --> discard
+				short source = helper.checkSource(received);
+				Integer key = Integer.valueOf(source);
+				short seq; //expected seqence number
+				if(key > -1)
+				{
+					if(recvFrom.containsKey(key)) //checks 
+					{
+						seq = (short) recvFrom.get(dest).intValue(); //grabs the previous sequence number and adds 1;
+						seq++;
+						if(seq == 4096)
+						{
+							seq = 0;
+						}
+						recvFrom.put(key,Integer.valueOf(seq)); //places the new current sequence into the array
+					}
+					else //the destination wasn't a key before.  Add this to the hashtable
+					{
+						seq = 0;
+						recvFrom.put(key,0); //places the new current sequence into the array
+					}	
 				
-				data.add(received);
+					seqRecv = helper.checkSequenceNo(received); //received sequence number
+				
+					if(seqRecv >= seq) 
+					{	
+						if(seqRecv == seq+1)//detect a gap
+							output.println("Receiver detected a gap in sequence number");
+						data.add(received); //queue up for transmission
+					}
+				
+				//send back ack
+
+				
 				if (debugL == 1) {
 					output.println("Data received");
 				}
 
+				
+					try {
+						Thread.sleep(theRF.aSIFSTime);
+					} catch (InterruptedException e) 
+					{
+						e.printStackTrace();
+					}
+				
+					theRF.transmit(helper.createACK(dest, source, seqRecv));
+				}
+				else //it was a broadcast we received.  We don't care about sequence #s or ACKS for this
+				{
+					data.add(received);
+				}
+
+				if (debugL == 1) {
+					output.println("Ack sent to " + source + "with sequence #" + seqRecv);
+				}
+
+				
+				// make and send ack  <--implement the ACK system.  
+				//How do we make it known that they know an ACK for this was sent?  What if they time out and send again?  Make sure that we don't add the data again.
+				//Dongni: we are going to add the data only if it has our expected sequence number (>last one received from the same source), which would be updated after the data is added.
+				
+				
 				//wait for SIFS and then send the ACK.
 
 				//thread.sleep(theRF.aSIFSTime) //wait for SIFSTime before sending

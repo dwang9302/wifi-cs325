@@ -20,7 +20,6 @@ public class Sender implements Runnable {
 	
 	private RF theRF;
 	private PrintWriter output; // The output stream we'll write to
-	// private ArrayBlockingQueue<byte[]> acks;
 	private ArrayBlockingQueue<byte[]> toSend; // +queue up outgoing data
 	private ArrayBlockingQueue<byte[]> acks;
 	
@@ -34,7 +33,7 @@ public class Sender implements Runnable {
 	private int retry; //keeps track of retries.  If it's 3, then we give up
 	
 	private byte[] ack;
-	private long timing;
+	private long startTime;
 	private static long timeOut = 5000; //timeout after 5 seconds.  Figure out if this is good enough
 	private boolean timedOut;
 	
@@ -113,7 +112,7 @@ public class Sender implements Runnable {
 			
 
 			// listen first, wait if the channel is busy.  Start with DIFS.  Also checks if this was a retry.  If not, then we're fine
-			while (!theRF.inUse() && wait != 0 && !helper.checkRetry(beingSent))
+			while (!theRF.inUse() && wait != 0)
 			{
 				retry = 0;// can do this in a better way.  Will work on that tomorrow
 				wait--; //this is the case where no one is using the channel during the entire time of DIFS
@@ -122,17 +121,19 @@ public class Sender implements Runnable {
 
 			if(wait != 0) //we exited the loop early.  Guess we gotta wait now...with even more time
 			{
-				if(!helper.checkRetry(beingSent)) //it's not a retry.  Wait for DIFS.
-				{
 					while(wait != 0) //theRF was in use once during DIFS.  Go into the part with a contension window
 					{
 						while (!theRF.inUse()) //TheRF isn't in use.  Decrement the counter
 						{
 							wait--;
+							if(wait == 0)
+							{
+								break;
+							}
 						}
-					}
-				}
-				//we finished DIFS, now time for the 'exponential backoff'
+					} //DIFS finished
+				
+				//now time for the 'exponential backoff'
 				wait = (rand.nextInt(cWindow) + 1) * theRF.aSlotTime;
 				//now we wait again
 				while(wait != 0)
@@ -140,6 +141,10 @@ public class Sender implements Runnable {
 					while (!theRF.inUse()) 
 					{
 						wait--;
+						if(wait == 0)
+						{
+							break;
+						}
 					}
 				}
 				//now we're done waiting.  It's our turn now...hopefully
@@ -149,16 +154,15 @@ public class Sender implements Runnable {
 			// try transmit
 			bytesSent = theRF.transmit(beingSent);
 
-			// implement State switch
 			// check for ack...
 			if (helper.checkDest(beingSent) != (short) (-1)) //we didn't send this to broadcast
 			{
 
 
-				timing = System.currentTimeMillis();
+				startTime = System.currentTimeMillis();
 				while(acks.isEmpty()) //create some artificial timeout time.  
 				{
-					if (System.currentTimeMillis() >= (timing + timeOut))
+					if (System.currentTimeMillis() >= (startTime + timeOut))
 					{
 						timedOut = true;
 						break; //escape the loop.  We timed out
@@ -179,11 +183,15 @@ public class Sender implements Runnable {
 			
 				if(timedOut || helper.checkSequenceNo(ack) != helper.checkSequenceNo(beingSent))//timed out or we got a bad ACK (hopefully implemented that it's an ACK for a previous iteration.  We also didn't retry too much
 				{
-					retry++ //increase the retry value
+					retry++; //increase the retry value
 					if(retry < theRF.dot11RetryLimit)//we didn't use maximum retries
 					{
 						toSend.add(helper.createMessage("Data", true, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataSize(beingSent), seq)); //resend the data.
 						cWindow = cWindow * 2; //increase the window size
+						if(cWindow > theRF.aCWmax)
+						{
+							cWindow = theRF.aCWmax;
+						}
 					}
 					else
 					{
@@ -209,7 +217,7 @@ public class Sender implements Runnable {
 				else 
 					output.println("Testing: Data not sent");
 			}
-			
+			timedOut = false;
 			
 			// if there's no ack or only bad ones (more than likely an older one was sent back), something went wrong
 			// window size ++
