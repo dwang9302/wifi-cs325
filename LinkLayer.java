@@ -29,7 +29,7 @@ public class LinkLayer implements Dot11Interface {
 	private short seq; // sequence #
 	private int debugLevel; // debug level: 0 - no diagnostic msg; 1 - with
 							// diagnostic msg
-
+	
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output
 	 * will be written.
@@ -52,7 +52,7 @@ public class LinkLayer implements Dot11Interface {
 		received = new ArrayBlockingQueue<byte[]>(10);
 		acks = new ArrayBlockingQueue<byte[]>(5);
 
-		this.sender = new Sender(theRF, this.output, toSend, debugLevel);// initialize
+		this.sender = new Sender(theRF, this.output, toSend, acks, debugLevel);// initialize
 																			// the
 																			// sender
 		this.receiver = new Receiver(theRF, this.output, received, acks,
@@ -69,13 +69,12 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int send(short dest, byte[] data, int len) {
 
-		//TODO:  Add some sort of Hashtable for the different addresses you send to and the sequence number for that.
 
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 
 		int dataLimit = RF.aMPDUMaximumLength - 10;
 
-		// if length < aMPDUMAximumLength - 10, send
+		
 		if (len <= dataLimit) {
 			// build the frame with data, sequence # = 0, retry bit = 0  
 			//Something about the sequence number:  what if we need to resend the data?  

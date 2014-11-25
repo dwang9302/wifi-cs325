@@ -130,6 +130,24 @@ public class Packet
         return packet;
     }
     
+    public byte[] changeSequenceNo(byte[] data, short seq)
+    {
+        firstByte = data[0];
+        data[1] = (byte)(seq & 0xff); //This works, I tested it
+        for(int i = 8; i < 12; i++) //starts from last bit of the first byte
+        {
+            if (getNthBitFromRight(seq,i) == 1) //uses helper method to find out the bit.  Starts from the right most bit
+            {
+                firstByte |= (1 << i-8 ); //sets the bits from the left
+            }
+            else
+            {
+                firstByte &= ~(1 << i-8);
+            }
+        }
+        return data;
+    }
+    
     /**
      * Creates an ACK to be sent
      */
@@ -238,14 +256,18 @@ public class Packet
             first &= ~(1 << 6);
             first &= ~(1 << 5); 
             first &= ~(1 << 4);
-        return (short)((first & 0xFFL) << 8) | //places the short in the correct order
+        return (short)(((first & 0xFFL) << 8) | //places the short in the correct order
                                 ((pack[1] & 0xFFL) << 0));
     }
 
     public boolean checkRetry (byte[] pack)
     {
         int first = (int)(pack[0] & 0xFFL);
-        return getNthBitFromRight(first, 4); //test to see if this works
+        if(getNthBitFromRight(first, 4) == 1) //checks if the bit is 1 or not
+        {
+            return true;
+        }
+        return false;
     }
 
     /**

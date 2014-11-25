@@ -1,6 +1,7 @@
 package wifi;
 
 import java.io.PrintWriter;
+import java.util.Hashtable;
 import java.util.concurrent.ArrayBlockingQueue;
 import rf.RF;
 
@@ -23,7 +24,7 @@ public class Receiver implements Runnable {
 	private int lastSeq; 
 	//Dongni: This may need to be a table that records all last received sequence numbers from different sources
 	//since different senders may have same/different sequence numbers. Which data structure would be ideal?
-	private HashTable<short,int> recvFrom;
+	private Hashtable<Integer,Integer> recvFrom;
 
 	/**
 	 * The constructor of class Recevier
@@ -45,7 +46,7 @@ public class Receiver implements Runnable {
 		this.ourMAC = ourMAC;
 		this.debugL = debugL;
 		//lastSeq = 0; //expected sequence number starts at 0
-		recvFrom = new HashTable(20);
+		recvFrom = new Hashtable<Integer,Integer>(20);
 		
 	}
 
@@ -72,7 +73,8 @@ public class Receiver implements Runnable {
 				received = theRF.receive(); //block until another good packet is received
 				dest= helper.checkDest(received); //we need this otherwise we're stuck in an endless loop
 			}
-
+			
+			//output.print("Data received: " + received.length); //use this to check how big the packets we send are
 			// check to see the frame type
 			String type = helper.checkMessageType(received);
 			if (type.equals("ACK"))// ACK
