@@ -92,7 +92,7 @@ public class Receiver implements Runnable {
                     {
                         seq = (short) recvFrom.get(key).intValue(); //grabs the previous sequence number and adds 1;
                          
-                        seq++;
+                        seq++; //maybe should not update the expected seq this early... but will use it for now.
                         if(seq == 4096)
                         {
                             seq = 0;
