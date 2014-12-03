@@ -9,7 +9,8 @@ import rf.RF;
  * A class for listening to incoming data, check and classify received data
  * 
  * @author Dongni W.
- * @version 11.9.2014
+ * @author Dennis Maguddayao 
+ * @version 11.22.2014
  */
 public class Receiver implements Runnable {
     private RF theRF;

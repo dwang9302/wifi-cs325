@@ -20,13 +20,12 @@ public class LinkLayer implements Dot11Interface {
 	private Packet helper; // +helper for writing/reading packet (if mAddr could
 							// be remembered?)
 	private Receiver receiver; // +the class for listening to incoming data
-	private Sender sender; // +the class for for sending outgoing data
+	private Sender2 sender; // +the class for for sending outgoing data
 	private ArrayBlockingQueue<byte[]> toSend; // +queue up outgoing data
 	private ArrayBlockingQueue<byte[]> received; // +queue up received but not
 													// yet forwarded data
 	private ArrayBlockingQueue<byte[]> acks; // +queue up received acks
 
-	private short seq; // sequence #
 	private int debugLevel; // debug level: 0 - no diagnostic msg; 1 - with
 							// diagnostic msg
 	
@@ -45,14 +44,14 @@ public class LinkLayer implements Dot11Interface {
 		theRF = new RF(null, null);
 		helper = new Packet();
 		debugLevel = 1;
-		seq = 0;
 
 		// thread
-		toSend = new ArrayBlockingQueue<byte[]>(10);
-		received = new ArrayBlockingQueue<byte[]>(10);
-		acks = new ArrayBlockingQueue<byte[]>(5);
+		// drops after 4
+		toSend = new ArrayBlockingQueue<byte[]>(4);
+		received = new ArrayBlockingQueue<byte[]>(4);
+		acks = new ArrayBlockingQueue<byte[]>(2); 
 
-		this.sender = new Sender(theRF, this.output, toSend, acks, debugLevel);// initialize
+		this.sender = new Sender2(theRF, this.output, toSend, acks, debugLevel);// initialize
 																			// the
 																			// sender
 		this.receiver = new Receiver(theRF, this.output, received, acks,
@@ -73,6 +72,7 @@ public class LinkLayer implements Dot11Interface {
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 
 		int dataLimit = RF.aMPDUMaximumLength - 10;
+		short seq = 0; //placeholder
 
 		
 		if (len <= dataLimit) {
@@ -83,10 +83,8 @@ public class LinkLayer implements Dot11Interface {
 			//Dongni: It would be handled in the thread. 
 			//DJ: you're right.  
 
-			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,
-					data, len, seq); // create packet
+			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,data, len, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
-			seq++;
 		} else // build multiple packets
 		{
 			int srcPos = 0;
@@ -97,19 +95,18 @@ public class LinkLayer implements Dot11Interface {
 				byte[] outPack = helper.createMessage("Data", false, ourMAC,
 						dest, packetS, dataLimit, seq); // create packet
 				toSend.add(outPack);// add to the outgoing queue
-				seq++;
+				//seq++;
 				srcPos = srcPos + dataLimit;
 				lenEx = lenEx - dataLimit;
 			}
 			byte[] packetL = new byte[lenEx];
 			System.arraycopy(data, srcPos, packetL, 0, lenEx);
-
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,
 					packetL, lenEx, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
 		}
 		output.println("toSend status: " + toSend.size());
-		return len; // may return -1 when?
+		return len; 
 	}
 
 	/**
