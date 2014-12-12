@@ -82,6 +82,12 @@ public class Receiver implements Runnable {
                 acks.add(received); // store received ack into the acks, will be handled in the Sender.
                                      
             }
+            else if (type.equals("Beacon"))
+            {
+                //add it immediately to the receiver to parse to system time
+                data.add(received);
+
+            }
             else // DATA
             {
                 short source = helper.checkSource(received);

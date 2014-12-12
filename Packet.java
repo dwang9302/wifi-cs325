@@ -270,6 +270,17 @@ public class Packet
         return false;
     }
 
+    public long checkBeaconTime (byte[] pack)
+    {
+        int length = pack.length;
+        long num = 0;
+        int shift = 0;
+        for (int i = 0; i < length; i++)
+            {
+                shift = 8 * (length - i -1);
+                num = num + (long) ((pack & 0xFFL) << shift)
+            }
+    }
     /**
      * Helper method for Grabbing bits.  Starts from the right most bit
      * From www.coderanch.com/t/464835/java/java/short-bit

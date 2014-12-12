@@ -28,6 +28,13 @@ public class LinkLayer implements Dot11Interface {
 
 	private int debugLevel; // debug level: 0 - no diagnostic msg; 1 - with
 							// diagnostic msg
+
+	private short beaconInterval; //number of seconds between each try of sending the beacon.
+
+	//TODO: figure out how to increment time within the LinkLayer
+	private long time; //hold what we believe the time is right now
+
+	private long check; //store the check for later
 	
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output
@@ -44,6 +51,7 @@ public class LinkLayer implements Dot11Interface {
 		theRF = new RF(null, null);
 		helper = new Packet();
 		debugLevel = 1;
+		time = System.currentTimeMillis(); //intializes the time
 
 		// thread
 		// drops after 4
@@ -68,12 +76,19 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int send(short dest, byte[] data, int len) {
 
-
+		//can't have too many unacked things to send
+		if (toSend.length > 3)//if there is 4 unacked
+		{
+			output.println("Too many packets.  Not sending");
+			return 0;
+		}
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 
 		int dataLimit = RF.aMPDUMaximumLength - 10;
 		short seq = 0; //placeholder
 
+		//can't have too many unacked things to send
+		if 
 		
 		if (len <= dataLimit) {
 			// build the frame with data, sequence # = 0, retry bit = 0  
@@ -134,11 +149,23 @@ public class LinkLayer implements Dot11Interface {
 			e.printStackTrace();
 		}
 
-		// write to transmission
-		dataR = helper.checkData(inPack);
-		t.setBuf(dataR);
-		t.setDestAddr(ourMAC);
-		t.setSourceAddr(helper.checkSource(inPack));
+		dataR = helper.checkData(inPack); //grabs the data
+
+		if((helper.checkMessageType(inPack)).equals("Beacon")) //we got a beacon.
+		{
+			//TODO: Check the timing and change if it's larger than we expected
+			check = helper.checkBeaconTime(dataR);
+			if (check > time) //if the time expected is higher, go higher
+			{
+				time = check
+			}
+		}
+		else
+		{	// write to transmission
+			t.setBuf(dataR);
+			t.setDestAddr(ourMAC);
+			t.setSourceAddr(helper.checkSource(inPack));
+		}
 		return dataR.length;
 
 	}
@@ -157,7 +184,11 @@ public class LinkLayer implements Dot11Interface {
 	public int command(int cmd, int val) {
 		output.println("LinkLayer: Sending command " + cmd + " with value "
 				+ val);
-		// TODO if(cmd == 0) //Options and Settings
+		// TODO 
+		if(cmd == 0) //Options and Settings
+		{
+
+		}
 		if (cmd == 1) // Debug level
 		{
 			if (val == 0) // disable debugging output
