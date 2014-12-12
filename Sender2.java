@@ -49,6 +49,8 @@ public class Sender2 implements Runnable {
     private Integer key; //destination mac address, -1 if bcast, 
     private short seq; //current sequence number
     boolean backoff;
+
+    private int sSelect;//determines how fast.  If 0, choose random. Else choose max
      
  
     /**
@@ -85,6 +87,17 @@ public class Sender2 implements Runnable {
      */
     public void changeDebug(int newLevel) {
         debugL = newLevel;
+    }
+
+
+    /**
+    * Change our exponential backoff.  0 is random, everything else is fixed
+    *
+    * @param select
+    */
+    public void changeSelect(int select)
+    {
+        sSelect = select;
     }
  
     @Override
@@ -284,6 +297,10 @@ public class Sender2 implements Runnable {
         public int getExpTime()
         {
         	//update window size for retries
+            if (sSelect != 0)
+            {
+                return theRF.aCWmax * theRF.aSlotTime;
+            }
         	if(retry > 0)
         		cWindow*= 2;
         	if(cWindow > theRF.aCWmax) 

@@ -43,6 +43,8 @@ public class Sender implements Runnable {
     private Hashtable<Integer,Integer> sentTo; //create a Table to store which MAC Address's we sent to and the sequence Number for them
     private Integer key;
     private short seq;
+
+    private int sSelect; //determines how fast.  If 0, choose random. Else choose max
      
  
     /**
@@ -75,6 +77,11 @@ public class Sender implements Runnable {
      */
     public void changeDebug(int newLevel) {
         debugL = newLevel;
+    }
+
+    public void changeSelect(int select)
+    {
+        sSelect = select;
     }
  
     @Override
@@ -140,7 +147,15 @@ public class Sender implements Runnable {
                     } //DIFS finished
                  
                 //now time for the 'exponential backoff'
-                wait = (rand.nextInt(cWindow) + 1) * theRF.aSlotTime;
+                if(sSelect != 0)
+                {
+                    wait = theRF.aCWmax * theRF.aSlotTime;
+                }
+                else
+                {
+                    wait = (rand.nextInt(cWindow) + 1) * theRF.aSlotTime;
+                }
+                
                 //now we wait again
                 output.println("Now waiting exponential backoff");
                 while(wait != 0)

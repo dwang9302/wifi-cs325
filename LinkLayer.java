@@ -29,7 +29,7 @@ public class LinkLayer implements Dot11Interface {
 	private int debugLevel; // debug level: 0 - no diagnostic msg; 1 - with
 							// diagnostic msg
 
-	private short beaconInterval; //number of seconds between each try of sending the beacon.
+	private short beaconInterval; //number of seconds between each try of sending the beacon.  If -1, then don't send
 
 	//TODO: figure out how to increment time within the LinkLayer
 	private long time; //hold what we believe the time is right now
@@ -200,8 +200,14 @@ public class LinkLayer implements Dot11Interface {
 			sender.changeDebug(debugLevel);
 			receiver.changeDebug(debugLevel);
 		}
-		// TODO if(cmd == 2) //Slot Selection
-		// TODO if(cmd == 3) //Beacon interval
+		if(cmd == 2) //Slot Selection
+		{
+			sender.changeSelect(val);
+		}
+		if(cmd == 3) //Beacon interval
+		{
+			beaconInterval = val;
+		}
 		return 0;
 	}
 }
