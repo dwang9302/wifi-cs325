@@ -91,16 +91,12 @@ public class LinkLayer implements Dot11Interface {
 		if 
 		
 		if (len <= dataLimit) {
-			// build the frame with data, sequence # = 0, retry bit = 0  
-			//Something about the sequence number:  what if we need to resend the data?  
-			//Dongni: Resending does not require changing sequence number. We need to change the retry bit. Could this be handled in the packet class? Take a packet and flip one bit?
-			//We should make sure that we have a timer to work upon for resending OR if we don't get an ACK
-			//Dongni: It would be handled in the thread. 
-			//DJ: you're right.  
+			// build the frame with data, sequence # = 0, retry bit = 0
 
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,data, len, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
-		} else // build multiple packets
+		} 
+		else // build multiple packets
 		{
 			int srcPos = 0;
 			int lenEx = len;
@@ -123,7 +119,7 @@ public class LinkLayer implements Dot11Interface {
 		output.println("toSend status: " + toSend.size());
 		return len; 
 	}
-
+	//TODO: fix the problem that happens when it sends and receives at the same time.
 	/**
 	 * Recv method blocks until data arrives, then writes it an address info
 	 * into the Transmission object. See docs for full description.
@@ -133,7 +129,7 @@ public class LinkLayer implements Dot11Interface {
 
 		byte[] dataR; // the packet received
 
-		while (received.isEmpty()) // 
+		while (received.isEmpty()) //isn't this redundant if we already have received.take()?
 		{
 			try {
 				Thread.sleep(RF.aSlotTime);
@@ -144,7 +140,7 @@ public class LinkLayer implements Dot11Interface {
 
 		byte[] inPack = null;
 		try {
-			inPack = received.take(); // try to get the received data
+			inPack = received.take(); // try to get the received data  //doesn't this block off until it receives something?
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

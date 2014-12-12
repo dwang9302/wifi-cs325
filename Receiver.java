@@ -77,19 +77,18 @@ public class Receiver implements Runnable {
             //output.print("Data received: " + received.length); //use this to check how big the packets we send are
             // check to see the frame type
             String type = helper.checkMessageType(received);
-            if (type.equals("ACK"))// ACK
-            {
-                acks.add(received); // store received ack into the acks, will be handled in the Sender.
-                                     
-            }
-            else if (type.equals("Beacon"))
+            if (type.equals("Beacon"))
             {
                 //add it immediately to the receiver to parse to system time
                 data.add(received);
 
             }
-            else // DATA
+            else if (type.equals("ACK"))// ACK
             {
+                acks.add(received); // store received ack into the acks, will be handled in the Sender.                         
+            }
+            else if(data.length !=4) //limits so that we're only sending a maximum of 4 packets up to the layer above.  So if we're at max size, stop.  Can't exceed 4.  Ignore it.  Beacon ignores this rule though.
+            {//Data
                 short source = helper.checkSource(received);
                 Integer key = Integer.valueOf(source);
                 short seq; //expected seqence number
@@ -140,54 +139,37 @@ public class Receiver implements Runnable {
                         data.add(received); //queue up for transmission
                     }
                  
-                //send back ack
+                    //send back ack
  
                  
-                if (debugL == 1) {
-                    output.println("Data received");
-                }
- 
-                 
-                    try {
-                        Thread.sleep(theRF.aSIFSTime);
-                    } catch (InterruptedException e) 
+                    if (debugL == 1) 
+                    {
+                        output.println("Data received");
+                    }
+                    try 
+                    {
+                        Thread.sleep(theRF.aSIFSTime); //wait SIFS before sending
+                    } 
+                    catch (InterruptedException e) 
                     {
                         e.printStackTrace();
                     }
                  
                     theRF.transmit(helper.createACK(dest, source, seq));
                  
-                    if (debugL == 1) {
+                    if (debugL == 1) 
+                    {
                         output.println("Ack sent to " + source + "with sequence #" + seq);
                     }
                 }
+                
                 else //it was a broadcast we received.  We don't care about sequence #s or ACKS for this
                 {
                     data.add(received);
                 }
- 
- 
-                 
-                // make and send ack  <--implement the ACK system.  
-                //How do we make it known that they know an ACK for this was sent?  What if they time out and send again?  Make sure that we don't add the data again.
-                //Dongni: we are going to add the data only if it has our expected sequence number (>last one received from the same source), which would be updated after the data is added.
-                 
-                 
-                //wait for SIFS and then send the ACK.
- 
-                //thread.sleep(theRF.aSIFSTime) //wait for SIFSTime before sending
-                //sendACK = helper.createACK(ourMAC, helper.checkSource(received), expectedSeq) //need to figure out how we do expectedSeq in order to do this.
-                //theRF.transmit(sendACK);
-                 
-                //Expected next packet with the right sequence number (may from different sources.)
-                //TODO: create a storage for each MAC address we receive from (outside of bcast?  Not sure about that yet)
-                //expectedSeq++; <---we should create a Hashtable of some sort to store expected sequences for each MAC Address we recieve from.
-                 
-            }
+                
+            } 
             //later beacon
- 
-             
- 
         }
  
     }
