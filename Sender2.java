@@ -75,7 +75,7 @@ public class Sender2 implements Runnable {
         retry = 0;
         sentTo = new Hashtable<Integer,Integer>(20); //don't know if we need 20 slots.  Doesn't hurt though.
 
-        
+        sSelect = 0;
         currentState = State.START_STATE;
         
     }

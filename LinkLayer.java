@@ -32,6 +32,8 @@ public class LinkLayer implements Dot11Interface {
 	private short beaconInterval; //number of seconds between each try of sending the beacon.  If -1, then don't send
 
 	//TODO: figure out how to increment time within the LinkLayer
+	private int sSelect; //boolean of random "0" or not
+
 	private long time; //hold what we believe the time is right now
 
 	private long check; //store the check for later
@@ -52,6 +54,7 @@ public class LinkLayer implements Dot11Interface {
 		helper = new Packet();
 		debugLevel = 1;
 		time = System.currentTimeMillis(); //intializes the time
+		sSelect = 0; //start off with random
 
 		// thread
 		// drops after 4
@@ -180,10 +183,33 @@ public class LinkLayer implements Dot11Interface {
 	public int command(int cmd, int val) {
 		output.println("LinkLayer: Sending command " + cmd + " with value "
 				+ val);
-		// TODO 
 		if(cmd == 0) //Options and Settings
 		{
+			if (debugLevel == 0)
+			{
+				output.println("Diagnostic is turned off");
+			}
+			else
+			{
+				output.println("Diagnostic is turned on");
+			}
+			if (sSelect == 0)
+			{
+				output.println("Slot Time chosen at random");
+			}
+			else
+			{
+				output.println("Max slot time chosen");
+			}
 
+			if (beaconInterval != -1)
+			{
+				output.println("Delay in beacon level: " + beaconInterval + " seconds");
+			}
+			else
+			{
+				output.println("Beacon disabled");
+			}
 		}
 		if (cmd == 1) // Debug level
 		{
@@ -198,11 +224,27 @@ public class LinkLayer implements Dot11Interface {
 		}
 		if(cmd == 2) //Slot Selection
 		{
-			sender.changeSelect(val);
+			if (val == 0)
+			{
+				sSelect = 0;
+				sender.changeSelect(sSelect);
+			}
+			else
+			{
+				sSelect = 1;
+				sender.changeSelect(sSelect);
+			}
 		}
 		if(cmd == 3) //Beacon interval
 		{
-			beaconInterval = val;
+			if (val < 0)
+			{
+				beaconInterval = -1;
+			}
+			else
+			{
+				beaconInterval = val;
+			}
 		}
 		return 0;
 	}

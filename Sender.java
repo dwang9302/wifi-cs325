@@ -258,22 +258,5 @@ public class Sender implements Runnable {
             //If something is on bcast, we shouldn't care if we get ACKs.  Worry about this later
         }
     }
-//  
-    //TODO: HANDLE EVENT :COUTNER.. 
-//  switch (myState)
-//    {
-//        case START_STATE:
-            //IF..ELSE IF.. ELSE...
-//            break;
-//            
-//        case  XXX
-//            break;
-//            
-//        case ...
-    //..................
-//            
-//        default:
-//            System.out.println("Unexpected state!");
-//    }
      
 }
