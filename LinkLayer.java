@@ -173,6 +173,19 @@ public class LinkLayer implements Dot11Interface {
 	 * Returns a current status code. See docs for full description.
 	 */
 	public int status() {
+
+		/*
+		1	SUCCESS	Initial value if 802_init is successful
+		2	UNSPECIFIED_ERROR	General error code
+		3	RF_INIT_FAILED	Attempt to initialize RF layer failed
+		4	TX_DELIVERED	Last transmission was acknowledged
+		5	TX_FAILED	Last transmission was abandoned after unsuccessful delivery attempts
+		6	BAD_BUF_SIZE	Buffer size was negative
+		7	BAD_ADDRESS	Pointer to a buffer or address was NULL
+		8	BAD_MAC_ADDRESS	Illegal MAC address was specified
+		9	ILLEGAL_ARGUMENT	One or more arguments are invalid
+		10	INSUFFICIENT_BUFFER_SPACE	Outgoing transmission rejected due to insufficient buffer space
+		*/
 		output.println("LinkLayer: Faking a status() return value of 0");
 		return 0;
 	}
