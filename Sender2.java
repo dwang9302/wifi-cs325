@@ -38,7 +38,8 @@ public class Sender2 implements Runnable {
      
     private byte[] ack;
     private long startTime;
-    private static long timeOut = 5000; //timeout after 5 seconds.  Figure out if this is good enough
+    private long endTime;
+    private static long timeOut = 10000; //timeout after 10 seconds.  Figure out if this is good enough
     private boolean timedOut;
      
     private Packet helper;
@@ -71,7 +72,7 @@ public class Sender2 implements Runnable {
         this.debugL = debugL;
         helper = new Packet();
         
-        difs = theRF.aSIFSTime + (2* theRF.aSlotTime); //added the standardized DIFS to wait for at the beginning of sending
+        difs = theRF.aSIFSTime + (2* theRF.aSlotTime); //added the standardized DIFS to wait for at the beginning of sending.  This value is 500
         rand = new Random(); //use this for deciding the contension slot.  Better to initialize now than later
         cWindow = theRF.aCWmin; //sets up the contension window
         retry = 0;
@@ -137,12 +138,24 @@ public class Sender2 implements Runnable {
                 	if(theRF.inUse())
                 		backoff = true;
                 	while(theRF.inUse()) {
+                        /*
                 		try {
+<<<<<<< Updated upstream
 							Thread.sleep(RF.aSIFSTime);//wait for idle channel
 							if(debugL > 0) output.println("Waiting channel");
+=======
+<<<<<<< HEAD
+							Thread.sleep(RF.aSIFSTime/4);//wait for idle channel
+							//output.println("Waiting idle");
+=======
+							Thread.sleep(RF.aSIFSTime);//wait for idle channel
+							if(debugL > 0) output.println("Waiting channel");
+>>>>>>> FETCH_HEAD
+>>>>>>> Stashed changes
 						} catch (InterruptedException e) {
 							stat.changeStat(Status.UNSPECIFIED_ERROR);
 							e.printStackTrace();
+                            */
 						} 
                 	}	
                 	currentState = State.AWAIT_DIFS;
@@ -156,6 +169,7 @@ public class Sender2 implements Runnable {
             			stat.changeStat(Status.UNSPECIFIED_ERROR);
             			e.printStackTrace();
             		}
+                    //add another loop so timing ends up that we end up with a time that ends with 50 ms
                 	if(!theRF.inUse() && !backoff)
                 	{
                 		//try transmit
@@ -200,6 +214,9 @@ public class Sender2 implements Runnable {
                      }
                      if(!acks.isEmpty() && !timedOut) //we didn't time out
                      {
+                        //Timing to see what would be a good timeout
+                        endTime = System.currentTimeMillis();
+                        output.println("Took " + (endTime - startTime) + " milliseconds to get an ACK");
                          try
                          {
                              ack = acks.take(); //it shouldn't block out too long.  We made sure that the array wasn't empty

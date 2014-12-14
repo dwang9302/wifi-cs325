@@ -101,6 +101,7 @@ public class LinkLayer implements Dot11Interface {
 
 		//can't have too many unacked things to send
 		if (toSend.size() > 3)//if there is 4 unacked
+<<<<<<< Updated upstream
 		{
 			stat.changeStat(Status.INSUFFICIENT_BUFFER_SPACE);
 			if(debugLevel > 0) output.println("Too many packets.  Not sending");
@@ -113,6 +114,20 @@ public class LinkLayer implements Dot11Interface {
 			if(debugLevel > 0) output.println("Illegal buffer size");
 			return 0;
 		}
+=======
+		{
+			stat.changeStat(Status.INSUFFICIENT_BUFFER_SPACE);
+			if(debugLevel > 0) output.println("Too many packets.  Not sending");
+			return 0;
+		}
+		
+		if(len < 0)
+		{
+			stat.changeStat(Status.BAD_BUF_SIZE);
+			if(debugLevel > 0) output.println("Illegal buffer size");
+			return 0;
+		}
+>>>>>>> Stashed changes
 			
 		if(debugLevel > 0) output.println("LinkLayer: Sending " + len + " bytes to " + dest + " at " + clock.getLocalTime());
 
@@ -220,6 +235,35 @@ public class LinkLayer implements Dot11Interface {
 		8	BAD_MAC_ADDRESS	Illegal MAC address was specified
 		9	ILLEGAL_ARGUMENT	One or more arguments are invalid
 		10	INSUFFICIENT_BUFFER_SPACE	Outgoing transmission rejected due to insufficient buffer space
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+		*/
+		output.println("LinkLayer: Faking a status() return value of 0");
+		status = stat.getStat;
+		/*
+		if(status == 1)
+
+		else if (status == 2)
+
+		else if (status == 3)
+
+		else if (status == 4)
+
+		else if (status == 5)
+
+		else if (status == 6)
+
+		else if (status == 7)
+
+		else if (status == 8)
+
+		else if (status == 9)
+
+		else if (status == 10)
+		*/
+=======
+>>>>>>> Stashed changes
 		**/
 		
 		//output.println("LinkLayer: Faking a status() return value of 0");
@@ -250,6 +294,10 @@ public class LinkLayer implements Dot11Interface {
 //			}
 //		}
 		int status = stat.getStat();
+<<<<<<< Updated upstream
+=======
+>>>>>>> FETCH_HEAD
+>>>>>>> Stashed changes
 		return status;
 	}
 
