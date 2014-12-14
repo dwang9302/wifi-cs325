@@ -1,3 +1,5 @@
+package wifi;
+
 /**
 * Holds the status of the Linklayer
 *
@@ -5,7 +7,7 @@
 
 public class Status
 {
-	private int status
+	private int status;
 
 	public Status()
 	{

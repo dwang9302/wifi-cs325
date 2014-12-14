@@ -90,13 +90,13 @@ public class Receiver2 implements Runnable {
              		break;
              		
              	case "Data":
-             		//check destination address
-             		short dataSource = helper.checkSource(received);
-                    Integer key = Integer.valueOf(dataSource);
-                    if(key == -1) //it was a broadcast we received
+             		if(dest == -1) //it was a broadcast we received
                     	data.add(received);
                     else
                     {
+                    	//check sender address
+                 		short dataSource = helper.checkSource(received);
+                        Integer key = Integer.valueOf(dataSource);
                     	short seq = -1; //last recv sequence number; default = -1: no-previous packet from this address
                     	//get last received sequence number from the table
                     	if(recvFrom.containsKey(key)) 
@@ -132,7 +132,7 @@ public class Receiver2 implements Runnable {
                         //always send ACK back
                         theRF.transmit(helper.createACK(dest, dataSource, seqRecv));
                         if (debugL == 1) {
-                            output.println("Ack sent to " + dataSource + "with sequence #" + seq);
+                            output.println("Ack sent to " + dataSource + "with sequence # " + seq);
                         }
                         break;
                     

@@ -58,7 +58,7 @@ public class Sender implements Runnable {
             ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL, Status sta) // ,ArrayBlockingQueue<byte[]>
                                                             // acks)
     {
-        status = sta;
+        stat = sta;
         this.theRF = theRF;
         this.output = output;
         this.toSend = toSend;

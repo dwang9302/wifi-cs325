@@ -85,7 +85,7 @@ public class LinkLayer implements Dot11Interface {
 	public int send(short dest, byte[] data, int len) {
 
 		//can't have too many unacked things to send
-		if (toSend.length > 3)//if there is 4 unacked
+		if (toSend.size() > 3)//if there is 4 unacked
 		{
 			output.println("Too many packets.  Not sending");
 			return 0;
@@ -96,7 +96,7 @@ public class LinkLayer implements Dot11Interface {
 		short seq = 0; //placeholder
 
 		//can't have too many unacked things to send
-		if 
+		//if 
 		
 		if (len <= dataLimit) {
 			// build the frame with data, sequence # = 0, retry bit = 0
@@ -161,7 +161,7 @@ public class LinkLayer implements Dot11Interface {
 			check = helper.checkBeaconTime(dataR);
 			if (check > time) //if the time expected is higher, go higher
 			{
-				time = check
+				time = check;
 			}
 		}
 		else
@@ -283,7 +283,7 @@ public class LinkLayer implements Dot11Interface {
 			}
 			else
 			{
-				beaconInterval = val;
+				beaconInterval = (short) val;
 			}
 		}
 		return 0;

@@ -91,7 +91,7 @@ public class Receiver implements Runnable {
             {
                 acks.add(received); // store received ack into the acks, will be handled in the Sender.                         
             }
-            else if(data.length <4) //limits so that we're only sending a maximum of 4 packets up to the layer above.  So if we're at max size, stop.  Can't exceed 4.  Ignore it.  Beacon ignores this rule though.
+            else if(data.size() <4) //limits so that we're only sending a maximum of 4 packets up to the layer above.  So if we're at max size, stop.  Can't exceed 4.  Ignore it.  Beacon ignores this rule though.
             {//Data
                 short source = helper.checkSource(received);
                 Integer key = Integer.valueOf(source);

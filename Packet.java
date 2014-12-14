@@ -278,8 +278,9 @@ public class Packet
         for (int i = 0; i < length; i++)
             {
                 shift = 8 * (length - i -1);
-                num = num + (long) ((pack & 0xFFL) << shift)
+                //num = num + (long) ((pack & 0xFFL) << shift); //broken, need fix
             }
+        return num;//---need fix
     }
     /**
      * Helper method for Grabbing bits.  Starts from the right most bit

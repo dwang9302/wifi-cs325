@@ -209,6 +209,7 @@ public class Sender2 implements Runnable {
                      {
                          retry++; //increase the retry value
                          output.println("Retry number: " + retry);
+                         backoff = true; //wait exponential backoff
                          if(retry < theRF.dot11RetryLimit)//we didn't use maximum retries
                          {
                              output.println("Beginning retry");
