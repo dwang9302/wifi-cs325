@@ -37,6 +37,9 @@ public class LinkLayer implements Dot11Interface {
 	private long time; //hold what we believe the time is right now
 
 	private long check; //store the check for later
+
+	private int status; //holds the status to run checks
+	private Status stat;
 	
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output
@@ -55,6 +58,8 @@ public class LinkLayer implements Dot11Interface {
 		debugLevel = 1;
 		time = System.currentTimeMillis(); //intializes the time
 		sSelect = 0; //start off with random
+		status = 1;
+		stat = new Status();
 
 		// thread
 		// drops after 4
@@ -62,11 +67,11 @@ public class LinkLayer implements Dot11Interface {
 		received = new ArrayBlockingQueue<byte[]>(4);
 		acks = new ArrayBlockingQueue<byte[]>(2); 
 
-		this.sender = new Sender2(theRF, this.output, toSend, acks, debugLevel);// initialize
+		this.sender = new Sender2(theRF, this.output, toSend, acks, debugLevel, stat);// initialize
 																			// the
 																			// sender
 		this.receiver = new Receiver(theRF, this.output, received, acks,
-				debugLevel, this.ourMAC); // initialize the receiver
+				debugLevel, this.ourMAC, stat); // initialize the receiver
 		new Thread(receiver).start();
 		new Thread(sender).start();
 
@@ -187,7 +192,29 @@ public class LinkLayer implements Dot11Interface {
 		10	INSUFFICIENT_BUFFER_SPACE	Outgoing transmission rejected due to insufficient buffer space
 		*/
 		output.println("LinkLayer: Faking a status() return value of 0");
-		return 0;
+		status = stat.getStat;
+
+		if(status == 1)
+
+		else if (status == 2)
+
+		else if (status == 3)
+
+		else if (status == 4)
+
+		else if (status == 5)
+
+		else if (status == 6)
+
+		else if (status == 7)
+
+		else if (status == 8)
+
+		else if (status == 9)
+
+		else if (status == 10)
+
+		return status;
 	}
 
 	/**

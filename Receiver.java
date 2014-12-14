@@ -25,6 +25,8 @@ public class Receiver implements Runnable {
     private int debugL;
     private int lastSeq; 
     private Hashtable<Integer,Integer> recvFrom;
+
+    private Status stat;
  
     /**
      * The constructor of class Recevier
@@ -35,7 +37,9 @@ public class Receiver implements Runnable {
      * @param acks
      *            - queue for received ACKs
      */
-    public Receiver(RF theRF, PrintWriter output,ArrayBlockingQueue<byte[]> data, ArrayBlockingQueue<byte[]> acks, int debugL, short ourMAC) {
+    public Receiver(RF theRF, PrintWriter output,ArrayBlockingQueue<byte[]> data, ArrayBlockingQueue<byte[]> acks, int debugL, short ourMAC, Status sta) {
+        
+        stat = sta;
         this.theRF = theRF;
         this.output = output;
         helper = new Packet();

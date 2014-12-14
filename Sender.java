@@ -45,6 +45,7 @@ public class Sender implements Runnable {
     private short seq;
 
     private int sSelect; //determines how fast.  If 0, choose random. Else choose max
+    private Status stat;
      
  
     /**
@@ -54,9 +55,10 @@ public class Sender implements Runnable {
      * @param toSend
      */
     public Sender(RF theRF, PrintWriter output,
-            ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL) // ,ArrayBlockingQueue<byte[]>
+            ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL, Status sta) // ,ArrayBlockingQueue<byte[]>
                                                             // acks)
     {
+        status = sta;
         this.theRF = theRF;
         this.output = output;
         this.toSend = toSend;
@@ -220,13 +222,16 @@ public class Sender implements Runnable {
                     else
                     {
                         //we give up.  Reset everything and tell the user that it didn't get sent.
+                        stat.changeStat(5);
                         output.println("Error: data wasn't sent");
                         cWindow = theRF.aCWmin;
                         retry = 0;
                     }
                     //rollback the sequence number
                     if(timedOut)
+                    {
                         sentTo.put(key,Integer.valueOf((seq - 1))); //even if this was sequence 0, the method above will grab -1 and make it 0 next time around)
+                    }
                     else
                     {//bad ack
                         output.println("Setting sequence number to " + Integer.valueOf(helper.checkSequenceNo(ack)));
@@ -236,6 +241,7 @@ public class Sender implements Runnable {
              
                 else //we're good.  Reset all values for this send
                 {
+                    stat.changeStat(4);
                     cWindow = theRF.aCWmin;
                     retry = 0;
                 }

@@ -51,6 +51,7 @@ public class Sender2 implements Runnable {
     boolean backoff;
 
     private int sSelect;//determines how fast.  If 0, choose random. Else choose max
+    private Status stat;
      
  
     /**
@@ -60,8 +61,9 @@ public class Sender2 implements Runnable {
      * @param toSend
      */
     public Sender2(RF theRF, PrintWriter output,
-            ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL)
+            ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL, Status sta)
     {
+        stat = sta;
         this.theRF = theRF;
         this.output = output;
         this.toSend = toSend;
@@ -217,6 +219,7 @@ public class Sender2 implements Runnable {
                          else
                          {
                              //we give up.  Reset everything and tell the user that it didn't get sent.
+                             stat.changeStat(5);
                              output.println("Data wasn't sent : exceed maximum retries d");
                              currentState = State.START_STATE; //proceed to next packet
                          }
@@ -224,6 +227,7 @@ public class Sender2 implements Runnable {
                      else //we're good, proceed to next packet
                      {
                              currentState = State.START_STATE;
+                             stat.changeStat(4);
                      }
                      break;
                      
