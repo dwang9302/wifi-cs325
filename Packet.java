@@ -275,6 +275,7 @@ public class Packet
         int length = pack.length;
         long num = 0;
         int shift = 0;
+        //TODO
         for (int i = 0; i < length; i++)
             {
                 shift = 8 * (length - i -1);

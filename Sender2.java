@@ -108,7 +108,8 @@ public class Sender2 implements Runnable {
             switch (currentState)
             {
                 case START_STATE: //waiting for data 
-                     output.println("Waiting for data");
+                     //diagnostic output
+                	 //if(debugL > 0) output.println("Sender: Waiting for data to send.");
                      timedOut = false;
                      seq = 0; //default: bcast/initial seq #
                      backoff = false;
@@ -124,21 +125,23 @@ public class Sender2 implements Runnable {
                     	 if(key > -1) //not bcast
                     		 assignSequence();
                     	 currentState = State.AWAIT_CHANNEL; 
-                    	 output.println("Sending data");
+                    	 if(debugL > 0) output.println("Try sending data");
                      } catch (InterruptedException e) {
+                    	 stat.changeStat(Status.UNSPECIFIED_ERROR);
                     	 e.printStackTrace();
                      }
                      break;
                      
                 case AWAIT_CHANNEL:
-                	output.println("Checking channel");
+                	if(debugL > 0) output.println("Checking channel");
                 	if(theRF.inUse())
                 		backoff = true;
                 	while(theRF.inUse()) {
                 		try {
-							Thread.sleep(RF.aSIFSTime/4);//wait for idle channel
-							output.println("Waiting idle");
+							Thread.sleep(RF.aSIFSTime);//wait for idle channel
+							if(debugL > 0) output.println("Waiting channel");
 						} catch (InterruptedException e) {
+							stat.changeStat(Status.UNSPECIFIED_ERROR);
 							e.printStackTrace();
 						} 
                 	}	
@@ -146,10 +149,11 @@ public class Sender2 implements Runnable {
                 	break;
                 	
                 case AWAIT_DIFS:
-                	output.println("Waiting difs");
+                	if(debugL > 0) output.println("Waiting difs");
                 	try {
             			Thread.sleep(difs);
             		} catch (InterruptedException e) {
+            			stat.changeStat(Status.UNSPECIFIED_ERROR);
             			e.printStackTrace();
             		}
                 	if(!theRF.inUse() && !backoff)
@@ -169,7 +173,7 @@ public class Sender2 implements Runnable {
                 	break;
                 	
                 case AWAIT_BACKOFF:
-                	output.println("Waiting exponential backoff");
+                	if(debugL > 0) output.println("Waiting exponential backoff");
                 	wait = getExpTime();
                 	while(wait != 0) //decrement when the channel is not busy
                     {
@@ -202,17 +206,18 @@ public class Sender2 implements Runnable {
                          } 
                          catch (InterruptedException e) 
                          {
+                        	 stat.changeStat(Status.UNSPECIFIED_ERROR);
                              e.printStackTrace();
                          }
                      }
                      if(timedOut || helper.checkSequenceNo(ack) != helper.checkSequenceNo(beingSent))//timed out or we got a bad ACK (hopefully implemented that it's an ACK for a previous iteration.  We also didn't retry too much
                      {
                          retry++; //increase the retry value
-                         output.println("Retry number: " + retry);
+                         if(debugL > 0) output.println("Retry number: " + retry);
                          backoff = true; //wait exponential backoff
                          if(retry < theRF.dot11RetryLimit)//we didn't use maximum retries
                          {
-                             output.println("Beginning retry");
+                        	 if(debugL > 0) output.println("Beginning retry");
                              beingSent = helper.createMessage("Data", true, helper.checkSource(beingSent), helper.checkDest(beingSent), helper.checkData(beingSent), helper.checkDataSize(beingSent), seq); //resend the data.
                              timedOut = false; //reset timedOut
                              currentState = State.AWAIT_CHANNEL; //start over, but don't fetch no data
@@ -220,20 +225,21 @@ public class Sender2 implements Runnable {
                          else
                          {
                              //we give up.  Reset everything and tell the user that it didn't get sent.
-                             stat.changeStat(5);
-                             output.println("Data wasn't sent : exceed maximum retries d");
+                             stat.changeStat(Status.TX_FAILED);
+                             if(debugL > 0) output.println("Data wasn't sent : exceed maximum retries");
                              currentState = State.START_STATE; //proceed to next packet
                          }
                      }
                      else //we're good, proceed to next packet
                      {
-                             currentState = State.START_STATE;
-                             stat.changeStat(4);
+                    	 stat.changeStat(Status.TX_DELIVERED);
+                    	 currentState = State.START_STATE;
                      }
                      break;
                      
                 default:
-                	output.println("Unexpected state: update error code");
+                	if(debugL > 0) output.println("Unexpected state: update error code");
+                	stat.changeStat(Status.UNSPECIFIED_ERROR);
 
             }
         }
@@ -262,7 +268,7 @@ public class Sender2 implements Runnable {
     	public void tryTransmit()
     	{
     		 bytesSent = theRF.transmit(beingSent);
-             output.println("Sending out: " + bytesSent + " bytes");
+    		 if(debugL > 0) output.println("Sending out: " + bytesSent + " bytes");
              if(key > -1)  //await ack only if its not bcast
              	currentState = State.AWAIT_ACK;
              else 
@@ -292,7 +298,7 @@ public class Sender2 implements Runnable {
             }
         	//update: places the new current sequence into the array or make a new entry 
             sentTo.put(key, Integer.valueOf(seq)); 
-            output.println("Sending sequence number: " + seq);      
+            if(debugL > 0) output.println("Assigning sequence number: " + seq);      
         }
         
         /**
@@ -302,16 +308,25 @@ public class Sender2 implements Runnable {
         public int getExpTime()
         {
         	//update window size for retries
-            if (sSelect != 0)
-            {
-                return theRF.aCWmax * theRF.aSlotTime;
-            }
         	if(retry > 0)
         		cWindow*= 2;
         	if(cWindow > theRF.aCWmax) 
         		cWindow = theRF.aCWmax;
-        
+        	
+        	//command slot selection
+        	 if (sSelect != 0)
+             {
+                 return cWindow * theRF.aSlotTime;
+             }
         	int window = (rand.nextInt(cWindow) + 1);
+        	
+        	//output msg
+        	if(debugL > 0) 
+        	{
+        		output.println("The size of collision window is " + cWindow);
+        		output.println("The slot count is " + window);
+        	}
+        	
         	return theRF.aSlotTime * window;
         }
      

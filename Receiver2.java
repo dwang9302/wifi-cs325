@@ -28,6 +28,9 @@ public class Receiver2 implements Runnable {
     private int debugL;
     private int lastSeq; 
     private Hashtable<Integer,Integer> recvFrom; //last recved sequence #
+    
+    private Status stat;
+    private Clock cl;
  
     /**
      * The constructor of class Recevier
@@ -38,8 +41,11 @@ public class Receiver2 implements Runnable {
      * @param acks
      *            - queue for received ACKs
      */
-    public Receiver2(RF theRF, PrintWriter output,ArrayBlockingQueue<byte[]> data, ArrayBlockingQueue<byte[]> acks, int debugL, short ourMAC) {
-        this.theRF = theRF;
+    public Receiver2(RF theRF, PrintWriter output,ArrayBlockingQueue<byte[]> data, 
+    		ArrayBlockingQueue<byte[]> acks, int debugL, short ourMAC, Status sta, Clock cl) {
+    	stat = sta;
+    	this.cl = cl;
+    	this.theRF = theRF;
         this.output = output;
         helper = new Packet();
  
@@ -71,12 +77,14 @@ public class Receiver2 implements Runnable {
             //Address selectivity
             //if the message is not for us, ignore. 
             short dest = helper.checkDest(received);
+            if(dest < 0)
+            	stat.changeStat(Status.BAD_ADDRESS);
             while( dest != ourMAC && dest != (short)(-1)) //destination is not our mac & it's not a broadcast.
             {
                 received = theRF.receive(); //block until another good packet is received
                 dest= helper.checkDest(received); //we need this otherwise we're stuck in an endless loop
             }
-            output.print("Data received: " + received.length + ", aimed for " + dest); //use this to check how big the packets we send are
+            if(debugL > 0) output.print("Receiver: Data received: " + received.length + ", aimed for " + dest + " at " + cl.getLocalTime()); //use this to check how big the packets we send are
             
             // check to see the frame type
             String type = helper.checkMessageType(received);
@@ -126,6 +134,7 @@ public class Receiver2 implements Runnable {
                             Thread.sleep(theRF.aSIFSTime);
                         } catch (InterruptedException e) 
                         {
+                        	stat.changeStat(Status.UNSPECIFIED_ERROR);
                             e.printStackTrace();
                         }
                     	
