@@ -2,6 +2,7 @@ package wifi;
 
 import java.io.PrintWriter;
 import java.util.concurrent.ArrayBlockingQueue;
+
 import rf.RF;
 
 /**
@@ -24,6 +25,7 @@ public class LinkLayer implements Dot11Interface {
 	private ArrayBlockingQueue<byte[]> toSend; // +queue up outgoing data
 	private ArrayBlockingQueue<byte[]> received; // +queue up received but not
 													// yet forwarded data
+	private ArrayBlockingQueue<byte[]> beacon; //stores a single beacon to send out
 	private ArrayBlockingQueue<byte[]> acks; // +queue up received acks
 
 	private int debugLevel; // debug level: 0 - no diagnostic msg; 1 - with
@@ -31,17 +33,12 @@ public class LinkLayer implements Dot11Interface {
 
 	private short beaconInterval; //number of seconds between each try of sending the beacon.  If -1, then don't send
 
-	//TODO: figure out how to increment time within the LinkLayer
 	private int sSelect; //boolean of random "0" or not
 
-	private long time; //hold what we believe the time is right now
-
-	private long check; //store the check for later
-
-	//private int status; //holds the status to run checks
-	private Status stat;
+	private int status; //holds the status to run checks
+	private Status stat; //status class to hold what status we're on
 	
-	private Clock clock;
+	private Clock clock; //clock class to hold time
 	
 	
 	/**
@@ -54,12 +51,15 @@ public class LinkLayer implements Dot11Interface {
 	 *            Output stream associated with GUI
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output) {
+		beaconInterval = 5;
+		status = 1;
 		stat = new Status();
-		clock = new Clock();
 		debugLevel = 1;
 		
+		beacon = new ArrayBlockingQueue<byte[]>(1);
 		theRF = new RF(null, null);
 		//check if RF fails
+		clock = new Clock(stat, beaconInterval, ourMAC, beacon);
 		if(theRF == null)
 			stat.changeStat(Status.RF_INIT_FAILED);
 		else output.println("RF layer initialized at " + clock.getLocalTime());
@@ -72,22 +72,22 @@ public class LinkLayer implements Dot11Interface {
 		this.output = output;
 		helper = new Packet();
 		
-		time = System.currentTimeMillis(); //intializes the time
 		sSelect = 0; //start off with random	
-
 		// thread
 		// drops after 4
 		toSend = new ArrayBlockingQueue<byte[]>(4);
 		received = new ArrayBlockingQueue<byte[]>(4);
 		acks = new ArrayBlockingQueue<byte[]>(2); 
 
-		this.sender = new Sender2(theRF, this.output, toSend, acks, debugLevel, stat);// initialize
+		
+		this.sender = new Sender2(theRF, this.output, toSend, acks, debugLevel, stat,clock, beacon);// initialize
 																			// the
 																			// sender
 		this.receiver = new Receiver2(theRF, this.output, received, acks,
 				debugLevel, this.ourMAC, stat, clock); // initialize the receiver
 		new Thread(receiver).start();
 		new Thread(sender).start();
+		new Thread(clock).start();
 
 		output.println("LinkLayer initialized with MAC address: " + this.ourMAC + " at " + clock.getLocalTime());
 		output.println("Send command 0 to see a list of supported commands");
@@ -101,7 +101,6 @@ public class LinkLayer implements Dot11Interface {
 
 		//can't have too many unacked things to send
 		if (toSend.size() > 3)//if there is 4 unacked
-<<<<<<< Updated upstream
 		{
 			stat.changeStat(Status.INSUFFICIENT_BUFFER_SPACE);
 			if(debugLevel > 0) output.println("Too many packets.  Not sending");
@@ -114,20 +113,6 @@ public class LinkLayer implements Dot11Interface {
 			if(debugLevel > 0) output.println("Illegal buffer size");
 			return 0;
 		}
-=======
-		{
-			stat.changeStat(Status.INSUFFICIENT_BUFFER_SPACE);
-			if(debugLevel > 0) output.println("Too many packets.  Not sending");
-			return 0;
-		}
-		
-		if(len < 0)
-		{
-			stat.changeStat(Status.BAD_BUF_SIZE);
-			if(debugLevel > 0) output.println("Illegal buffer size");
-			return 0;
-		}
->>>>>>> Stashed changes
 			
 		if(debugLevel > 0) output.println("LinkLayer: Sending " + len + " bytes to " + dest + " at " + clock.getLocalTime());
 
@@ -137,12 +122,12 @@ public class LinkLayer implements Dot11Interface {
 		//can't have too many unacked things to send
 		//if 
 		
-		if (len <= dataLimit) {
+		if (len <= dataLimit) { 
 			// build the frame with data, sequence # = 0, retry bit = 0
 			byte[] outPack = helper.createMessage("Data", false, ourMAC, dest,data, len, seq); // create packet
 			toSend.add(outPack);// add to the outgoing queue
 		} 
-		else // build multiple packets
+		else // build multiple packets.  case where send too large items
 		{
 			int srcPos = 0;
 			int lenEx = len;
@@ -165,15 +150,11 @@ public class LinkLayer implements Dot11Interface {
 		if(debugLevel > 0) output.println("Finished the sending routine. Packet in buffer: " + toSend.size() + " at " +clock.getLocalTime() );
 		return len; 
 	}
-	//TODO: add a thread to send beacon;
-	//TODO: fix the problem that happens when it sends and receives at the same time.
 	/**
 	 * Recv method blocks until data arrives, then writes it an address info
 	 * into the Transmission object. See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		//if(debugLevel > 0) output.println("Receiver: Waiting for incoming packets at " + clock.getLocalTime());
-
 		byte[] dataR; // the packet received
 
 		while (received.isEmpty()) //isn't this redundant if we already have received.take()?
@@ -199,17 +180,7 @@ public class LinkLayer implements Dot11Interface {
 
 		dataR = helper.checkData(inPack); //grabs the data
 
-		//****************this part could be handled in Receiver2, case "BEACON"******************
-		if((helper.checkMessageType(inPack)).equals("Beacon")) //we got a beacon.
-		{
-			//TODO: Check the timing and change if it's larger than we expected
-			check = helper.checkBeaconTime(dataR); //TODO
-			if (check > time) //if the time expected is higher, go higher
-			{
-				time = check;
-			}
-		}
-		else
+		if(!(helper.checkMessageType(inPack)).equals("Beacon")) //Beacons are handled in receiver.  So we ignore beacons
 		{	// write to transmission
 			t.setBuf(dataR);
 			t.setDestAddr(ourMAC);
@@ -235,69 +206,9 @@ public class LinkLayer implements Dot11Interface {
 		8	BAD_MAC_ADDRESS	Illegal MAC address was specified
 		9	ILLEGAL_ARGUMENT	One or more arguments are invalid
 		10	INSUFFICIENT_BUFFER_SPACE	Outgoing transmission rejected due to insufficient buffer space
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 		*/
 		output.println("LinkLayer: Faking a status() return value of 0");
-		status = stat.getStat;
-		/*
-		if(status == 1)
-
-		else if (status == 2)
-
-		else if (status == 3)
-
-		else if (status == 4)
-
-		else if (status == 5)
-
-		else if (status == 6)
-
-		else if (status == 7)
-
-		else if (status == 8)
-
-		else if (status == 9)
-
-		else if (status == 10)
-		*/
-=======
->>>>>>> Stashed changes
-		**/
-		
-		//output.println("LinkLayer: Faking a status() return value of 0");
-//		TODO: Print?
-//		if(debugLevel > 0) {
-//			switch(status) {
-//			case 1:
-//				break;
-//			case 2:
-//				break;
-//			case 3:
-//				break;
-//			case 4:
-//				break;
-//			case 5:
-//				break;
-//			case 6:
-//				break;
-//			case 7:
-//				break;
-//			case 8:
-//				break;
-//			case 9:
-//				break;
-//			case 10:
-//				break;
-//			
-//			}
-//		}
-		int status = stat.getStat();
-<<<<<<< Updated upstream
-=======
->>>>>>> FETCH_HEAD
->>>>>>> Stashed changes
+		status = stat.getStat();
 		return status;
 	}
 
@@ -371,7 +282,7 @@ public class LinkLayer implements Dot11Interface {
 		}
 		else if(cmd == 3) //Beacon interval
 		{
-			if (val == 1)
+			if (val == -1)
 			{
 				beaconInterval = -1;
 			}
@@ -383,6 +294,7 @@ public class LinkLayer implements Dot11Interface {
 			else
 			{
 				beaconInterval = (short) val;
+				clock.changeInterval(beaconInterval);
 			}
 		}
 		else 

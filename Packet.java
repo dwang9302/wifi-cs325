@@ -1,5 +1,7 @@
 package wifi;
 
+import java.util.zip.CRC32;
+
 /**
  * A Helper Class for shifting bits and bytes around to read or write a packet
  * 
@@ -20,12 +22,15 @@ public class Packet
     private int firstBit;
     private int secondBit;
     private int thirdBit;
+    private CRC32 checksum;
+    private long cs;
+    
     /**
      * Constructor for objects of class Packet
      */
     public Packet()
     {
-        // holds no variables
+    	checksum = new CRC32();
     }
 
     /**
@@ -119,14 +124,24 @@ public class Packet
                 packet[6+i] = data[i];
             }
         }
-        //figure out how to make extra packets for those with higher than lengh 2038
         
         //we're not implementing a real checksum yet, so we'll just use 1s for CRC for now
-        packet[packetLength-4] = 1;
-        packet[packetLength-3] = 1;
-        packet[packetLength-2] = 1;
-        packet[packetLength-1] = 1;
+        if(data == null)
+        {
+        	packet[packetLength-4] = 1;
+            packet[packetLength-3] = 1;
+            packet[packetLength-2] = 1;
+            packet[packetLength-1] = 1;
+        }
+        else {
+        checksum.update(data);
+        cs = checksum.getValue();
         
+        packet[packetLength-4] = (byte)((cs >> 24) & 0xff);
+        packet[packetLength-3] = (byte)((cs >> 16)& 0xff);
+        packet[packetLength-2] = (byte)((cs >> 8) & 0xff);
+        packet[packetLength-1] = (byte)(cs & 0xff);
+        }
         return packet;
     }
     
@@ -206,6 +221,15 @@ public class Packet
         }
     }
     
+    public long checkCS(byte[] packet)
+    {
+    	 return (long)(((packet[packet.length-4] & 0xFFL) << 24) |
+    			 ((packet[packet.length-3] & 0xFFL) << 16) |
+    			 ((packet[packet.length-2] & 0xFFL) << 8) |
+    			((packet[packet.length-1] & 0xFFL) << 0) );//aces the short in the correct order
+               
+    }
+    
     /**
      * This is used to check if the data you received is actually for your MAC address
      */
@@ -269,19 +293,33 @@ public class Packet
         }
         return false;
     }
-
+    public byte[] createLongByte(long l) {
+        return new byte[] {
+            (byte) (l >> 56),
+            (byte) (l >> 48),
+            (byte) (l >> 40),
+            (byte) (l >> 32),
+            (byte) (l >> 24),
+            (byte) (l >> 16),
+            (byte) (l >> 8),
+            (byte) l
+        };
+    }
     public long checkBeaconTime (byte[] pack)
     {
-        int length = pack.length;
-        long num = 0;
-        int shift = 0;
-        //TODO
-        for (int i = 0; i < length; i++)
-            {
-                shift = 8 * (length - i -1);
-                //num = num + (long) ((pack & 0xFFL) << shift); //broken, need fix
-            }
-        return num;//---need fix
+        return (long)(((pack[0] & 0xFFL) << 56) | //places the short in the correct order
+                ((pack[1] & 0xFFL) << 48)|
+                ((pack[2] & 0xFFL) << 40)|
+                ((pack[3] & 0xFFL) << 32)|
+                ((pack[4] & 0xFFL) << 24)|
+                ((pack[5] & 0xFFL) << 16)|
+                ((pack[6] & 0xFFL) << 8)|
+                ((pack[7] & 0xFFL) << 0));
+    }
+    
+    public byte[] createBeacon (long l, short mAddr)
+    {
+    	return createMessage("Beacon", false, mAddr, (short)-1, createLongByte(l), 8, (short)0);
     }
     /**
      * Helper method for Grabbing bits.  Starts from the right most bit

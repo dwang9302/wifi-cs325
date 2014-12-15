@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
+
 import rf.RF;
  
 /**
@@ -25,6 +26,7 @@ public class Sender2 implements Runnable {
     private PrintWriter output; // The output stream we'll write to
     private ArrayBlockingQueue<byte[]> toSend; // +queue up outgoing data
     private ArrayBlockingQueue<byte[]> acks;
+    private ArrayBlockingQueue<byte[]> beacon;
      
     private int debugL;
     private int bytesSent; //checks the bytes sent
@@ -39,7 +41,6 @@ public class Sender2 implements Runnable {
     private byte[] ack;
     private long startTime;
     private long endTime;
-    private static long timeOut = 10000; //timeout after 10 seconds.  Figure out if this is good enough
     private boolean timedOut;
      
     private Packet helper;
@@ -53,6 +54,9 @@ public class Sender2 implements Runnable {
 
     private int sSelect;//determines how fast.  If 0, choose random. Else choose max
     private Status stat;
+    
+    private int ACKTimeout; //timeout for waiting for an ACK.  
+    private Clock clock;
      
  
     /**
@@ -62,7 +66,7 @@ public class Sender2 implements Runnable {
      * @param toSend
      */
     public Sender2(RF theRF, PrintWriter output,
-            ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL, Status sta)
+            ArrayBlockingQueue<byte[]> toSend, ArrayBlockingQueue<byte[]> acks, int debugL, Status sta, Clock cl, ArrayBlockingQueue<byte[]> bea)
     {
         stat = sta;
         this.theRF = theRF;
@@ -71,6 +75,9 @@ public class Sender2 implements Runnable {
         this.acks = acks;
         this.debugL = debugL;
         helper = new Packet();
+        clock = cl;
+        beacon = bea;
+        ACKTimeout = 600 + theRF.aSIFSTime + theRF.aSlotTime; //found on the 802.11 PDF (page 834)(pg 932 on the pdf) //597 was the exact time for roundtrip.
         
         difs = theRF.aSIFSTime + (2* theRF.aSlotTime); //added the standardized DIFS to wait for at the beginning of sending.  This value is 500
         rand = new Random(); //use this for deciding the contension slot.  Better to initialize now than later
@@ -110,54 +117,61 @@ public class Sender2 implements Runnable {
             {
                 case START_STATE: //waiting for data 
                      //diagnostic output
-                	 //if(debugL > 0) output.println("Sender: Waiting for data to send.");
-                     timedOut = false;
-                     seq = 0; //default: bcast/initial seq #
-                     backoff = false;
-                     cWindow = theRF.aCWmin;
-                     retry = 0;
-                     //wait = difs; //adds in the wait immediately
-
-                     try 
-                     {
-                    	 beingSent = toSend.take(); //get the packet
-                    	 //check for non-bcast, assign sequence number 
-                    	 key = Integer.valueOf(helper.checkDest(beingSent));
-                    	 if(key > -1) //not bcast
-                    		 assignSequence();
-                    	 currentState = State.AWAIT_CHANNEL; 
-                    	 if(debugL > 0) output.println("Try sending data");
-                     } catch (InterruptedException e) {
+                	 if (!beacon.isEmpty()) //pretty much just wait until the the end of a transaction before you send a beacon
+                	 {
+                		 try
+                		 {
+                		 beingSent = beacon.take();
+                		 output.println("Sending a beacon with time " + helper.checkBeaconTime(helper.checkData(beingSent)));
+                		 theRF.transmit(beingSent);
+                		 }
+                		 catch (InterruptedException e)
+                		 {
+                			 stat.changeStat(Status.UNSPECIFIED_ERROR);
+                        	 e.printStackTrace(); 
+                		 }
+                	 }
+                	 else
+                	 {	 
+                		 //if(debugL > 0) output.println("Sender: Waiting for data to send.");
+                     	timedOut = false;
+                     	seq = 0; //default: bcast/initial seq #
+                     	backoff = false;
+                     	cWindow = theRF.aCWmin;
+                     	retry = 0;
+                     	if (toSend.isEmpty())
+                     	{
+                     		break;
+                     	}
+                     	try 
+                     	{
+                     		beingSent = toSend.take(); //get the packet
+                     		//check for non-bcast, assign sequence number 
+                     		key = Integer.valueOf(helper.checkDest(beingSent));
+                     		if(key > -1) //not bcast
+                     			assignSequence();
+                     		currentState = State.AWAIT_CHANNEL; 
+                     		if(debugL > 0) output.println("Try sending data");
+                     	} catch (InterruptedException e) {
                     	 stat.changeStat(Status.UNSPECIFIED_ERROR);
                     	 e.printStackTrace();
-                     }
+                     	}
+            		}
                      break;
                      
                 case AWAIT_CHANNEL:
                 	if(debugL > 0) output.println("Checking channel");
                 	if(theRF.inUse())
                 		backoff = true;
-                	while(theRF.inUse()) {
-                        /*
+                	while(theRF.inUse()) 
+                	{
                 		try {
-<<<<<<< Updated upstream
-							Thread.sleep(RF.aSIFSTime);//wait for idle channel
-							if(debugL > 0) output.println("Waiting channel");
-=======
-<<<<<<< HEAD
-							Thread.sleep(RF.aSIFSTime/4);//wait for idle channel
-							//output.println("Waiting idle");
-=======
-							Thread.sleep(RF.aSIFSTime);//wait for idle channel
-							if(debugL > 0) output.println("Waiting channel");
->>>>>>> FETCH_HEAD
->>>>>>> Stashed changes
+							Thread.sleep(50);
 						} catch (InterruptedException e) {
 							stat.changeStat(Status.UNSPECIFIED_ERROR);
-							e.printStackTrace();
-                            */
-						} 
+						}//artificial waiting
                 	}	
+                	if(debugL > 0) output.println("Channel Free");
                 	currentState = State.AWAIT_DIFS;
                 	break;
                 	
@@ -169,6 +183,15 @@ public class Sender2 implements Runnable {
             			stat.changeStat(Status.UNSPECIFIED_ERROR);
             			e.printStackTrace();
             		}
+                	while(clock.getTime() % 50 != 0)
+                	{
+                    	try {
+                			Thread.sleep(1);
+                		} catch (InterruptedException e) {
+                			stat.changeStat(Status.UNSPECIFIED_ERROR);
+                			e.printStackTrace();
+                		}
+                	}
                     //add another loop so timing ends up that we end up with a time that ends with 50 ms
                 	if(!theRF.inUse() && !backoff)
                 	{
@@ -206,7 +229,7 @@ public class Sender2 implements Runnable {
                 	 startTime = System.currentTimeMillis();
                      while(acks.isEmpty()) //create some artificial timeout time.  
                      {
-                         if (System.currentTimeMillis() >= (startTime + timeOut))
+                         if (System.currentTimeMillis() >= (startTime + ACKTimeout))
                          {
                              timedOut = true;
                              break; //escape the loop.  We timed out
@@ -243,6 +266,7 @@ public class Sender2 implements Runnable {
                          {
                              //we give up.  Reset everything and tell the user that it didn't get sent.
                              stat.changeStat(Status.TX_FAILED);
+                             sentTo.put(key,Integer.valueOf((seq - 1))); //reset the sequence value
                              if(debugL > 0) output.println("Data wasn't sent : exceed maximum retries");
                              currentState = State.START_STATE; //proceed to next packet
                          }
@@ -261,23 +285,7 @@ public class Sender2 implements Runnable {
             }
         }
     }
-                 
-            
-            //Worry about disconnect later..
-                        
-//                         //rollback the sequence number
-           
-//                         if(timedOut)
-//                             sentTo.put(key,Integer.valueOf((seq - 1))); //even if this was sequence 0, the method above will grab -1 and make it 0 next time around)
-//                         else
-//                         {//bad ack
-//                             output.println("Setting sequence number to " + Integer.valueOf(helper.checkSequenceNo(ack)));
-//                             sentTo.put(key,Integer.valueOf(helper.checkSequenceNo(ack)-1));
-//                         }
-//                         }
-                  
-    
-             
+
         /**
          * handle transmit
          * called by AWAIT_BACKOFF, AWAIT_DIFS cases.
@@ -333,6 +341,11 @@ public class Sender2 implements Runnable {
         	//command slot selection
         	 if (sSelect != 0)
              {
+        		 if(debugL > 0) 
+             	{
+             		output.println("The size of collision window is " + cWindow);
+             		output.println("The slot count is " + cWindow);
+             	}
                  return cWindow * theRF.aSlotTime;
              }
         	int window = (rand.nextInt(cWindow) + 1);
